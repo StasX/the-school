@@ -9,7 +9,14 @@ export default defineConfig({
         }),
     ],
     server: {
+        ...(process.env.VITE_DEV_SERVER_HOST ? {
+            host: '0.0.0.0',
+            port: 5173,
+            strictPort: true,
+            hmr: { host: process.env.VITE_DEV_SERVER_HOST },
+        } : {}),
         watch: {
+            usePolling: process.env.VITE_USE_POLLING === 'true',
             ignored: ['**/storage/framework/views/**'],
         },
     },

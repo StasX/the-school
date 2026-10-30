@@ -249,6 +249,57 @@ http://localhost:8090
 docker compose down
 ```
 
+## Development with Docker
+
+The development stack includes PHP development dependencies, SQLite and GD for
+PHPUnit, PCOV for mutation testing, and a Vite server with live reload. Source
+changes are shared with the containers. Dependencies and application data use
+Docker volumes, separate from the production stack and host dependencies.
+
+From the project root, start it with:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+Open `http://localhost:8090`. The first start installs Composer and npm
+dependencies, initializes the sample database, and runs migrations. No root
+`.env` file is required: the app loads `docker/dev.env` with development
+overrides. Its sample credentials and application key are for local development.
+The owner login is `joe@mail.com` / `abc123!!`.
+
+Stop the production stack first if it is using port 8090. The development web
+and Vite ports are bound to localhost. Vite uses polling so edits also reload
+when running Docker Desktop on Windows.
+
+Run checks inside the development container:
+
+```bash
+docker compose -f docker-compose.dev.yml exec app php artisan test
+docker compose -f docker-compose.dev.yml exec app vendor/bin/phpstan analyse
+docker compose -f docker-compose.dev.yml exec app vendor/bin/phpcs
+docker compose -f docker-compose.dev.yml exec app vendor/bin/php-cs-fixer fix --dry-run --diff
+docker compose -f docker-compose.dev.yml exec app vendor/bin/infection --threads=4 --no-progress --min-msi=80
+```
+
+PHPUnit uses an in-memory SQLite database rather than the development MariaDB
+data. After changing dependency lockfiles, restart the affected service to
+install the updated dependencies:
+
+```bash
+docker compose -f docker-compose.dev.yml restart app vite
+```
+
+Stop the development environment with:
+
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+Add `-v` only when you want to delete all development data and dependency volumes.
+Before returning to the production frontend build, stop Vite and remove its
+generated `server/public/hot` file if it remains after shutdown.
+
 ## Running Tests
 
 ### PHPUnit

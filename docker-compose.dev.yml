@@ -1,0 +1,65 @@
+name: theschool-dev
+
+services:
+  app:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
+    ports:
+      - "127.0.0.1:8090:80"
+    volumes:
+      - ./server:/var/www/html
+      - ./docker/dev.env:/var/www/html/.env:ro
+      - vendor:/var/www/html/vendor
+      - storage:/var/www/html/storage
+      - bootstrap-cache:/var/www/html/bootstrap/cache
+      - uploads:/var/www/html/uploads
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/api/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+      retries: 5
+
+  vite:
+    image: node:24-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    environment:
+      APP_URL: http://localhost:8090
+      VITE_DEV_SERVER_HOST: localhost
+      VITE_USE_POLLING: "true"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./server:/app
+      - node-modules:/app/node_modules
+
+  mariadb:
+    build: ./sql
+    environment:
+      MARIADB_ROOT_PASSWORD: root_password
+      MARIADB_DATABASE: school
+      MARIADB_USER: school_user
+      MARIADB_PASSWORD: school_pass
+    volumes:
+      - mariadb-data:/var/lib/mysql
+
+  redis:
+    build: ./redis
+    volumes:
+      - redis-data:/data
+
+volumes:
+  vendor:
+  node-modules:
+  storage:
+  bootstrap-cache:
+  uploads:
+  mariadb-data:
+  redis-data:
