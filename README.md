@@ -142,7 +142,9 @@ TheSchool/
 │   ├── artisan
 │   ├── composer.json
 │   ├── composer.lock
-│   ├── docker-entrypoint.sh
+│   ├── docker/
+│   │   ├── docker-entrypoint.sh
+│   │   └── dev-entrypoint.sh
 │   ├── Dockerfile
 │   ├── infection.json5
 │   ├── package-lock.json
