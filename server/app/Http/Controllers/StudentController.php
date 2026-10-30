@@ -238,17 +238,17 @@ class StudentController extends Controller
 
             $filename = $this->storeImage($file);
 
-            Storage::disk('uploads')->putFileAs(
-                '',
-                $file,
-                $filename
-            );
             $newImage = "/upload/$filename";
             $data['Image'] = $newImage;
         }
 
         try {
-            $student->update($data);
+            DB::transaction(function () use ($student, $data, $courses): void {
+                $student->update($data);
+                if ($courses !== null) {
+                    $student->courses()->sync($courses);
+                }
+            });
         } catch (Throwable $exception) {
             $this->cleanupImage($newImage);
             throw $exception;
@@ -256,10 +256,6 @@ class StudentController extends Controller
 
         if ($imageChanged) {
             $this->cleanupImage($oldImage);
-        }
-
-        if ($courses !== null) {
-            $student->courses()->sync($courses);
         }
 
         $student->refresh();

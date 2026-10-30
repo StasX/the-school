@@ -241,6 +241,41 @@ class StudentTest extends TestCase
         ]);
     }
 
+    public function test_update_enrollment_failure_preserves_student_courses_and_image(): void
+    {
+        $this->withoutExceptionHandling();
+        $student = $this->createStudent();
+        $original = $student->refresh()->getAttributes();
+        $oldCourse = $this->createCourse();
+        $newCourse = $this->createCourse();
+        $student->courses()->attach($oldCourse->Course_ID);
+        Storage::disk('uploads')->put('test.jpg', 'original image');
+        DB::unprepared(
+            'CREATE TEMP TRIGGER fail_enrollment BEFORE INSERT ON school ' .
+            "BEGIN SELECT RAISE(ABORT, 'Enrollment failed'); END"
+        );
+
+        try {
+            $this->putJson("/api/student/{$student->Student_ID}", [
+                'email' => 'updated@example.com',
+                'name' => 'Updated Student',
+                'phone' => '0509999999',
+                'image' => UploadedFile::fake()->image('replacement.jpg'),
+                'courses' => [$newCourse->Course_ID],
+            ]);
+            $this->fail('Expected the enrollment exception to be rethrown.');
+        } catch (QueryException $exception) {
+            $this->assertStringContainsString('Enrollment failed', $exception->getMessage());
+        } finally {
+            DB::unprepared('DROP TRIGGER fail_enrollment');
+        }
+
+        $this->assertSame($original, $student->refresh()->getAttributes());
+        $this->assertSame([$oldCourse->Course_ID], $student->courses()->pluck('courses.Course_ID')->all());
+        $this->assertSame(['test.jpg'], Storage::disk('uploads')->allFiles());
+        $this->assertSame('original image', Storage::disk('uploads')->get('test.jpg'));
+    }
+
     public function test_student_courses_can_be_updated(): void
     {
         $student = $this->createStudent();
