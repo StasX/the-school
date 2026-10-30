@@ -96,6 +96,7 @@ class StudentController extends Controller
                 'required',
                 'email',
                 'unique:students,Email',
+                'max:64',
             ],
             'name' => [
                 'required',
@@ -182,7 +183,7 @@ class StudentController extends Controller
                 'email',
                 Rule::unique('students', 'Email')
                     ->ignore($id, 'Student_ID'),
-                'max:60',
+                'max:64',
                 'min:7',
             ],
             'name' => [

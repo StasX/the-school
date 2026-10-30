@@ -172,6 +172,58 @@ class StudentTest extends TestCase
         );
     }
 
+    #[DataProvider('emailLengthProvider')]
+    public function test_student_email_length_on_creation(int $length, bool $valid): void
+    {
+        $email = str_repeat('a', $length - strlen('@example.com')) . '@example.com';
+
+        $response = $this->postJson('/api/student', [
+            'email' => $email,
+            'name' => 'Test Student',
+            'phone' => '0501234567',
+            'image' => UploadedFile::fake()->image('student.jpg'),
+        ]);
+
+        if ($valid) {
+            $response->assertCreated();
+            $this->assertDatabaseHas('students', ['Email' => $email]);
+        } else {
+            $response->assertUnprocessable()->assertJsonValidationErrors('email');
+            $this->assertDatabaseCount('students', 0);
+            $this->assertSame([], Storage::disk('uploads')->allFiles());
+        }
+    }
+
+    #[DataProvider('emailLengthProvider')]
+    public function test_student_email_length_on_update(int $length, bool $valid): void
+    {
+        $student = $this->createStudent();
+        $original = $student->refresh()->getAttributes();
+        $email = str_repeat('a', $length - strlen('@example.com')) . '@example.com';
+
+        $response = $this->putJson("/api/student/{$student->Student_ID}", [
+            'email' => $email,
+            'name' => 'Updated Student',
+            'phone' => $student->Phone,
+        ]);
+
+        if ($valid) {
+            $response->assertOk();
+            $this->assertSame($email, $student->refresh()->Email);
+        } else {
+            $response->assertUnprocessable()->assertJsonValidationErrors('email');
+            $this->assertSame($original, $student->refresh()->getAttributes());
+        }
+    }
+
+    public static function emailLengthProvider(): array
+    {
+        return [
+            'maximum length' => [64, true],
+            'over maximum length' => [65, false],
+        ];
+    }
+
     public function test_student_can_be_created_with_courses(): void
     {
         $courses = collect([
