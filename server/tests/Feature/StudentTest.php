@@ -389,6 +389,35 @@ class StudentTest extends TestCase
         );
     }
 
+    public function test_deletion_failure_preserves_student_enrollments_and_image(): void
+    {
+        $this->withoutExceptionHandling();
+        $student = $this->createStudent();
+        $course = $this->createCourse();
+        $student->courses()->attach($course->Course_ID);
+        Storage::disk('uploads')->put('test.jpg', 'original image');
+        DB::unprepared(
+            'CREATE TEMP TRIGGER fail_student_deletion BEFORE DELETE ON students ' .
+            "BEGIN SELECT RAISE(ABORT, 'Student deletion failed'); END"
+        );
+
+        try {
+            $this->deleteJson("/api/student/{$student->Student_ID}");
+            $this->fail('Expected the deletion exception to be rethrown.');
+        } catch (QueryException $exception) {
+            $this->assertStringContainsString('Student deletion failed', $exception->getMessage());
+        } finally {
+            DB::unprepared('DROP TRIGGER fail_student_deletion');
+        }
+
+        $this->assertDatabaseHas('students', ['Student_ID' => $student->Student_ID]);
+        $this->assertDatabaseHas('school', [
+            'Student_ID' => $student->Student_ID,
+            'Course_ID' => $course->Course_ID,
+        ]);
+        $this->assertSame('original image', Storage::disk('uploads')->get('test.jpg'));
+    }
+
     public function test_student_image_can_be_updated(): void
     {
         Storage::disk('uploads')->put(

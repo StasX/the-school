@@ -274,8 +274,10 @@ class StudentController extends Controller
             return response('', Response::HTTP_NOT_FOUND);
         }
         $oldImage = $student->Image;
-        $student->courses()->detach();
-        $student->delete();
+        DB::transaction(function () use ($student): void {
+            $student->courses()->detach();
+            $student->delete();
+        });
         $this->cleanupImage($oldImage);
 
         return response('', Response::HTTP_NO_CONTENT);
