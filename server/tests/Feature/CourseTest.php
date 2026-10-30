@@ -91,7 +91,7 @@ class CourseTest extends TestCase
         $this->getJson('/api/course/999999')
             ->assertNotFound()
             ->assertJson([
-                'error' => 'Course not found',
+                'message' => 'Course not found',
             ]);
     }
 
@@ -294,7 +294,7 @@ class CourseTest extends TestCase
         ])
             ->assertNotFound()
             ->assertJson([
-                'error' => 'Course not found',
+                'message' => 'Course not found',
             ]);
     }
 

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Administrator;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -70,7 +71,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
 
         $this->assertGuest();
@@ -84,7 +85,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
 
         $this->assertGuest();
@@ -95,7 +96,7 @@ class AuthenticationTest extends TestCase
         $this->postJson('/api/login', [])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
 
         $this->assertGuest();
@@ -115,7 +116,8 @@ class AuthenticationTest extends TestCase
                 'role' => $administrator->Role,
                 'image' => $administrator->Image,
             ])
-            ->assertJsonMissingPath('administrator.password');
+            ->assertJsonMissingPath('password')
+            ->assertJsonMissingPath('Password');
     }
 
     public function test_guest_cannot_get_authenticated_user_data(): void
@@ -157,7 +159,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
         $this->assertGuest();
     }
@@ -170,7 +172,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
         $this->assertGuest();
     }
@@ -182,7 +184,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
         $this->assertGuest();
     }
@@ -209,7 +211,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
         $this->assertGuest();
     }
@@ -222,7 +224,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
         $this->assertGuest();
     }
@@ -235,8 +237,49 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'error' => 'Invalid username or password.',
+                'message' => 'Invalid username or password.',
             ]);
+        $this->assertGuest();
+    }
+
+    public function test_login_accepts_password_at_minimum_length(): void
+    {
+        $administrator = $this->createAdministrator([
+            'Password' => Hash::make('12345678'),
+        ]);
+
+        $this->postJson('/api/login', [
+            'email' => 'owner@example.com',
+            'password' => '12345678',
+        ])
+            ->assertOk();
+
+        $this->assertAuthenticatedAs($administrator);
+    }
+
+    public function test_administrator_email_must_be_unique(): void
+    {
+        $this->createAdministrator();
+
+        $this->expectException(QueryException::class);
+
+        $this->createAdministrator([
+            'Email' => 'owner@example.com',
+            'Name' => 'Duplicate Owner',
+        ]);
+    }
+
+    public function test_login_rejects_password_longer_than_maximum_length(): void
+    {
+        $this->postJson('/api/login', [
+            'email' => 'owner@example.com',
+            'password' => str_repeat('a', 33),
+        ])
+            ->assertUnauthorized()
+            ->assertJson([
+                'message' => 'Invalid username or password.',
+            ]);
+
         $this->assertGuest();
     }
 }

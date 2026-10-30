@@ -40,6 +40,9 @@ export function courseValidationConfig({
                 filesize: "Image must not exceed 500 KB.",
                 imagesize: "Image too large."
             }
-        }
+        },
+
+        errorPlacement: function () {
+        },
     }
 }

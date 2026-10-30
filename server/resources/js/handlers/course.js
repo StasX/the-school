@@ -7,6 +7,9 @@ import CourseApi from "../api/courseApi";
 import { resetSchoolHandlers, setSchoolWarningsHandler } from "./school";
 import AuthApi from "../api/authApi";
 import { courseValidationConfig } from "../validations/course";
+import { invalidFields } from '../messages/invalidFields';
+import AuthFailure from "../messages/authFailure";
+import {CourseFailure} from "../messages/courseFailure";
 
 function isCourseFormChanged(course) {
     return (
@@ -29,14 +32,15 @@ export const courseHandlers = {
         CourseApi.getById(id).done(data => {
             AuthApi.auth().done((admin) => {
                 courseInfoRender(data, admin);
-            });
-        });
+            }).fail(AuthFailure.auth);
+        }).fail(CourseFailure.get);
     },
+
     add: () => {
         const html = $(template);
         const form = html.filter("#courses-form");
 
-        form.validate(courseValidationConfig());
+        const validator = form.validate(courseValidationConfig());
         const fileInput = html.find("#image-file");
         const imageElement = html.find("#image-upload");
         html.find("#total").text(0);
@@ -44,7 +48,10 @@ export const courseHandlers = {
         form.on("input change", () => updateCourseWarnings());
         form.on("submit", function (e) {
             e.preventDefault();
-            if (!form.valid()) return;
+            if (!form.valid()) {
+                invalidFields(validator);
+                return;
+            }
             const formData = new FormData(this);
             if (fileInput[0].files.length) {
                 formData.set("image", fileInput[0].files[0]);
@@ -52,12 +59,13 @@ export const courseHandlers = {
             CourseApi.add(formData).done(data => {
                 resetSchoolHandlers();
                 courseHandlers.info(data.id);
-                CourseApi.getAll().done(courses => courseRender(courses));
-            }).fail(xhr => console.error(xhr));
+                CourseApi.getAll().done(courses => courseRender(courses)).fail(CourseFailure.get);
+            }).fail(CourseFailure.add);
         });
         html.find("#save-course").on("click", () => form.trigger("submit"));
         $("#main-container").html(html);
     },
+
     edit: course => {
         const html = $(template);
         if (!course.students.length) {
@@ -65,7 +73,7 @@ export const courseHandlers = {
         }
         const form = html.filter("#courses-form");
 
-        form.validate(courseValidationConfig({ edit: true }));
+        const validator = form.validate(courseValidationConfig({ edit: true }));
         html.find("#container-title").text("Edit Course");
         html.find("#name").val(course.name);
         html.find("#description").val(course.description);
@@ -83,18 +91,22 @@ export const courseHandlers = {
         html.find("#delete-course").on("click", () => courseHandlers.remove(course));
         form.on("submit", function (e) {
             e.preventDefault();
-            if (!form.valid()) return;
+            if (!form.valid()) {
+                invalidFields(validator);
+                return;
+            }
             const formData = new FormData(this);
             formData.set("_method", "PUT");
             CourseApi.update(course.id, formData).done(data => {
                 resetSchoolHandlers();
                 courseHandlers.info(data.id);
-                CourseApi.getAll().done(courses => courseRender(courses));
-            }).fail(xhr => console.error(xhr));
+                CourseApi.getAll().done(courses => courseRender(courses)).fail(CourseFailure.get);
+            }).fail(CourseFailure.update);
         });
         html.find("#save-course").on("click", () => form.trigger("submit"));
         $("#main-container").html(html);
     },
+
     remove: course => {
         Swal.fire({
             title: `Do you really want to delete course: ${course.name}?`,
@@ -130,10 +142,10 @@ export const courseHandlers = {
                                 title: "Course deleted successfully!",
                                 icon: "success",
                             }).then(() => {
-                                CourseApi.getAll().done(courses => courseRender(courses));
+                                CourseApi.getAll().done(courses => courseRender(courses)).fail(CourseFailure.get);
                                 $("#main-container").html("");
                             });
-                        }).fail(xhr => console.error(xhr));
+                        }).fail(CourseFailure.remove);
                     }
                 });
             }

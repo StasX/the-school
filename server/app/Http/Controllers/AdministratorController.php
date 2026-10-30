@@ -12,9 +12,50 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use RuntimeException;
+use Throwable;
 
 class AdministratorController extends Controller
 {
+    private function storeImage(UploadedFile $file): string
+    {
+        $filename = uniqid() . '.' . $file->extension();
+
+        $path = Storage::disk('uploads')->putFileAs(
+            '',
+            $file,
+            $filename
+        );
+
+        if ($path === false) {
+            throw new RuntimeException('Failed to store image.');
+        }
+
+        return $filename;
+    }
+
+    //------------------------------------------------------------------------
+
+    private function cleanupImage(?string $image): void
+    {
+        if (! $image) {
+            return;
+        }
+
+        try {
+            $disk = Storage::disk('uploads');
+            $filename = basename($image);
+
+            if ($disk->exists($filename) && ! $disk->delete($filename)) {
+                throw new RuntimeException('Failed to delete image.');
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    //------------------------------------------------------------------------
+
     public function getAll(): JsonResponse
     {
         /** @var Administrator $admin */
@@ -39,7 +80,7 @@ class AdministratorController extends Controller
 
         if (! $administrator) {
             return response()->json([
-                'error' => 'Administrator not found',
+                'message' => 'Administrator not found',
             ], Response::HTTP_NOT_FOUND);
         }
 
@@ -66,6 +107,7 @@ class AdministratorController extends Controller
                 'email',
                 'unique:administrators,Email',
                 'max:64',
+                'min:7',
             ],
             'name' => [
                 'required',
@@ -80,13 +122,14 @@ class AdministratorController extends Controller
             'phone' => [
                 'required',
                 'string',
-                'max:20',
+                'max:16',
                 'regex:/^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/',
             ],
             'password' => [
                 'required',
                 'string',
                 'min:8',
+                'max:32',
             ],
             'image' => [
                 'required',
@@ -102,18 +145,24 @@ class AdministratorController extends Controller
                 'error' => 'Invalid image',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-        Storage::disk('uploads')->putFileAs('', $file, $filename);
-        /** @var array<string, mixed> $data */
-        $data = [
-            'Email' => $validated['email'],
-            'Name' => $validated['name'],
-            'Role' => $validated['role'],
-            'Phone' => $validated['phone'],
-            'Password' => Hash::make($validated['password']),
-            'Image' => "/upload/$filename",
-        ];
-        $administrator = Administrator::create($data);
+        $filename = $this->storeImage($file);
+
+        try {
+            /** @var array<string, mixed> $data */
+            $data = [
+                'Email' => $validated['email'],
+                'Name' => $validated['name'],
+                'Role' => $validated['role'],
+                'Phone' => $validated['phone'],
+                'Password' => Hash::make($validated['password']),
+                'Image' => "/upload/$filename",
+            ];
+            $administrator = Administrator::create($data);
+        } catch (Throwable $exception) {
+            $this->cleanupImage("/upload/$filename");
+            throw $exception;
+        }
+
         return (new AdministratorResource($administrator))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
@@ -128,13 +177,13 @@ class AdministratorController extends Controller
         $administrator = Administrator::find($id);
         if (! $administrator) {
             return response()->json([
-                'error' => 'Administrator not found',
+                'message' => 'Administrator not found',
             ], Response::HTTP_NOT_FOUND);
         }
 
         if ($administrator->Role === 'owner' && $admin->Role !== 'owner') {
             return response()->json([
-                'error' => 'Only an owner can modify an owner',
+                'message' => 'Only an owner can modify an owner',
             ], Response::HTTP_FORBIDDEN);
         }
         /**
@@ -168,7 +217,7 @@ class AdministratorController extends Controller
             'phone' => [
                 'required',
                 'string',
-                'max:20',
+                'max:16',
                 'regex:/^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/',
             ],
             'image' => [
@@ -201,7 +250,7 @@ class AdministratorController extends Controller
             $data['Role'] === 'owner'
         ) {
             return response()->json([
-                'error' => 'Owner role cannot be assigned',
+                'message' => 'Owner role cannot be assigned',
             ], Response::HTTP_FORBIDDEN);
         }
 
@@ -210,33 +259,31 @@ class AdministratorController extends Controller
         }
 
         $oldImage = $administrator->Image;
+        $newImage = null;
         $imageChanged = $request->hasFile('image');
         if ($imageChanged) {
             $file = $request->file('image');
 
             if (! $file instanceof UploadedFile) {
                 return response()->json([
-                    'error' => 'Invalid image',
+                    'message' => 'Invalid image',
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
-            $filename = uniqid() . '.' . $file->getClientOriginalExtension();
+            $filename = $this->storeImage($file);
+            $newImage = "/upload/$filename";
 
-            Storage::disk('uploads')->putFileAs(
-                '',
-                $file,
-                $filename
-            );
-
-            $data['Image'] = "/upload/$filename";
+            $data['Image'] = $newImage;
         }
 
-        $administrator->update($data);
-        if (
-            $imageChanged &&
-            $oldImage &&
-            Storage::disk('uploads')->exists(basename($oldImage))
-        ) {
+        try {
+            $administrator->update($data);
+        } catch (Throwable $exception) {
+            $this->cleanupImage($newImage);
+            throw $exception;
+        }
+
+        if ($imageChanged) {
             Storage::disk('uploads')->delete(basename($oldImage));
         }
         return (new AdministratorResource($administrator))->response();

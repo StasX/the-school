@@ -12,7 +12,7 @@ export function administratorValidationConfig({
             phone: {
                 required: true,
                 phone: true,
-                maxlength: 20,
+                maxlength: 16,
             },
             email: {
                 required: true,
@@ -66,6 +66,9 @@ export function administratorValidationConfig({
                 filesize: "Image must not exceed 500 KB.",
                 imagesize: "Image dimensions must not exceed 250×250."
             }
-        }
+        },
+
+        errorPlacement: function () {
+        },
     };
 }

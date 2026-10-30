@@ -9,6 +9,8 @@ import { haveSameElements } from "../utils/arrays";
 import { resetSchoolHandlers, setSchoolWarningsHandler } from "./school";
 import { courseHandlers } from "./course";
 import { studentValidationConfig } from "../validations/student";
+import { invalidFields } from "../messages/invalidFields";
+import StudentFailure from "../messages/studentFailure";
 
 function isStudentFormChanged(student) {
     const currentCourses = (student?.courses || []).map(obj => obj.id);
@@ -38,13 +40,13 @@ export const studentHandlers = {
         StudentApi.getById(id).done((data) => {
             studentInfoRender(data);
         }
-        ).fail(xhr => console.error(xhr));
+        ).fail(StudentFailure.get);
     },
     add: () => {
         const html = $(template);
         const saveBtn = html.find("#save-student");
         const form = html.filter("#students-form");
-        form.validate(studentValidationConfig());
+        const validator = form.validate(studentValidationConfig());
         const fileInput = html.find("#image-file");
         const imageElement = html.find("#image-upload");
         const coursesContainer = form.find(".courses-container");
@@ -52,6 +54,10 @@ export const studentHandlers = {
         form.on("input change", () => updateStudentWarnings());
         form.on("submit", function (e) {
             e.preventDefault();
+            if (!form.valid()) {
+                invalidFields(validator);
+                return;
+            }
             if (!form.valid()) return;
             const formData = new FormData(this);
             if (fileInput[0].files.length) {
@@ -60,8 +66,8 @@ export const studentHandlers = {
             StudentApi.add(formData).done((data) => {
                 resetSchoolHandlers();
                 studentHandlers.info(data.id);
-                StudentApi.getAll().done((students) => studentRender(students));
-            }).fail(xhr => console.error(xhr));
+                StudentApi.getAll().done((students) => studentRender(students)).fail(StudentFailure.get);
+            }).fail(StudentFailure.add);
         });
         saveBtn.on("click", () => form.trigger("submit"));
         CourseApi.getAll().done((data) => $.each(data, (i, course) => {
@@ -88,7 +94,7 @@ export const studentHandlers = {
         const buttons = html.filter("#btn-row");
         const saveBtn = buttons.find("#save-student");
         const form = html.filter("#students-form");
-        form.validate(studentValidationConfig({ edit: true }));
+        const validator = form.validate(studentValidationConfig({ edit: true }));
         const coursesContainer = form.find(".courses-container");
         titleContainer.text("Edit Student");
         const btnContainer = $('<div class="col d-flex align-items-center"></div>');
@@ -103,7 +109,10 @@ export const studentHandlers = {
         form.on("input change", () => updateStudentWarnings(student));
         form.on("submit", function (e) {
             e.preventDefault();
-            if (!form.valid()) return;
+            if (!form.valid()) {
+                invalidFields(validator);
+                return;
+            }
             const formData = new FormData(this);
             formData.set("_method", "PUT");
             if (fileInput[0].files.length) {
@@ -112,8 +121,8 @@ export const studentHandlers = {
             StudentApi.update(student.id, formData).done((data) => {
                 resetSchoolHandlers();
                 studentHandlers.info(data.id);
-                StudentApi.getAll().done(students => studentRender(students));
-            }).fail(xhr => console.error(xhr));
+                StudentApi.getAll().done(students => studentRender(students)).fail(StudentFailure.get);
+            }).fail(StudentFailure.update);
         });
         removeBtn.on("click", () => studentHandlers.remove(student));
         saveBtn.on("click", () => form.trigger("submit"));
@@ -176,10 +185,10 @@ export const studentHandlers = {
                                 title: "Student deleted successfully!",
                                 icon: "success",
                             }).then(() => {
-                                StudentApi.getAll().done(students => studentRender(students));
+                                StudentApi.getAll().done(students => studentRender(students)).fail(StudentFailure.get);
                                 $("#main-container").html("");
                             });
-                        }).fail(xhr => console.error(xhr));
+                        }).fail(StudentFailure.remove);
                     }
                 });
             }
@@ -188,6 +197,6 @@ export const studentHandlers = {
     unsubscribe: (courseId, studentId) => {
         StudentApi.unsubscribe(courseId, studentId).done(() => {
             courseHandlers.info(courseId);
-        }).fail(xhr => console.error(xhr));
+        }).fail(StudentFailure.unsubscribe);
     }
 }
