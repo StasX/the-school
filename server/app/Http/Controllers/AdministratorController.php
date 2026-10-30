@@ -233,6 +233,7 @@ class AdministratorController extends Controller
                 'nullable',
                 'string',
                 'min:8',
+                'max:32',
             ],
         ]);
         /** @var array<string, mixed> $data */

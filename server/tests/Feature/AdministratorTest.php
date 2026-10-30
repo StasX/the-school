@@ -218,6 +218,30 @@ class AdministratorTest extends TestCase
         $this->assertSame($oldPassword, $manager->Password);
     }
 
+    public function test_overlong_password_update_preserves_existing_password(): void
+    {
+        $owner = $this->createAdministrator([
+            'Email' => 'owner@example.com',
+            'Role' => 'owner',
+        ]);
+        $manager = $this->createAdministrator([
+            'Email' => 'manager@example.com',
+        ]);
+        $oldPassword = $manager->Password;
+
+        $this->actingAs($owner)
+            ->putJson("/api/administrator/{$manager->Administrator_ID}", [
+                'email' => $manager->Email,
+                'name' => $manager->Name,
+                'phone' => $manager->Phone,
+                'password' => str_repeat('a', 33),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
+
+        $this->assertSame($oldPassword, $manager->fresh()->Password);
+    }
+
     public function test_owner_can_update_administrator_password(): void
     {
         $owner = $this->createAdministrator([
