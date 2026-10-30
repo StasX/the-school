@@ -325,7 +325,7 @@ jobs:
 
       - name: Prepare environment
         run: |
-          cp .env.example .env
+          cp ../.env.example .env
           php artisan key:generate
 
       - name: Run PHPUnit
@@ -375,7 +375,7 @@ jobs:
 
       - name: Prepare environment
         run: |
-          cp .env.example .env
+          cp ../.env.example .env
           php artisan key:generate
           mkdir -p storage/infection
 
@@ -448,7 +448,7 @@ jobs:
         run: npm ci
 
       - name: Prepare environment
-        run: cp server/.env.example .env
+        run: cp .env.example .env
 
       - name: Start application
         run: docker compose up -d --build
