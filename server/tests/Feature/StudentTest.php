@@ -114,7 +114,7 @@ class StudentTest extends TestCase
     {
         $course = $this->createCourse();
         DB::unprepared(
-            "CREATE TEMP TRIGGER fail_enrollment BEFORE INSERT ON school " .
+            'CREATE TEMP TRIGGER fail_enrollment BEFORE INSERT ON school ' .
             "BEGIN SELECT RAISE(ABORT, 'Enrollment failed'); END"
         );
 
