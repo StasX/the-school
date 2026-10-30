@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use RuntimeException;
@@ -141,8 +142,11 @@ class StudentController extends Controller
                 'Image' => "/upload/$filename",
             ];
             $courses = $validated['courses'] ?? [];
-            $student = Student::create($data);
-            $student->courses()->sync($courses);
+            $student = DB::transaction(function () use ($data, $courses): Student {
+                $student = Student::create($data);
+                $student->courses()->sync($courses);
+                return $student;
+            });
         } catch (Throwable $exception) {
             $this->cleanupImage("/upload/$filename");
             throw $exception;

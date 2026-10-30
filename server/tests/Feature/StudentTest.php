@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Student;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -107,6 +108,32 @@ class StudentTest extends TestCase
             ->assertJson([
                 'message' => 'Student not found',
             ]);
+    }
+
+    public function test_enrollment_failure_rolls_back_student_and_cleans_up_image(): void
+    {
+        $course = $this->createCourse();
+        DB::unprepared(
+            "CREATE TEMP TRIGGER fail_enrollment BEFORE INSERT ON school " .
+            "BEGIN SELECT RAISE(ABORT, 'Enrollment failed'); END"
+        );
+
+        try {
+            $this->postJson('/api/student', [
+                'email' => 'student@example.com',
+                'name' => 'Test Student',
+                'phone' => '0501234567',
+                'image' => UploadedFile::fake()->image('student.jpg'),
+                'courses' => [$course->Course_ID],
+            ])->assertStatus(500);
+
+            $this->assertDatabaseMissing('students', ['Email' => 'student@example.com']);
+            $this->assertDatabaseCount('school', 0);
+            $this->assertSame([], Storage::disk('uploads')->allFiles());
+            $this->assertDatabaseHas('courses', ['Course_ID' => $course->Course_ID]);
+        } finally {
+            DB::unprepared('DROP TRIGGER fail_enrollment');
+        }
     }
 
     public function test_authenticated_administrator_can_create_student(): void
