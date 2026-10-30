@@ -7,6 +7,9 @@ import { resetAdministrationHandlers, setAdministrationWarningsHandler } from ".
 import { administratorValidationConfig } from "../validations/administrator";
 import AuthApi from "../api/authApi";
 import { userRender } from "../renders/navbar";
+import { invalidFields } from "../messages/invalidFields";
+import AuthFailure from "../messages/authFailure";
+import AdministratorFailure from "../messages/administratorFailure";
 
 function isAdministratorFormChanged(administrator) {
     return (
@@ -32,7 +35,7 @@ export const administratorHandlers = {
         const html = $(template);
         const saveBtn = html.find("#save-administrator");
         const form = html.filter("#administrators-form");
-        form.validate(administratorValidationConfig());
+        const validator = form.validate(administratorValidationConfig());
         const fileInput = html.find("#image-file");
         const imageElement = html.find("#image-upload");
         const roleInput = html.find("#role");
@@ -47,7 +50,10 @@ export const administratorHandlers = {
         form.on("input change", () => updateAdministratorWarnings());
         form.on("submit", function (e) {
             e.preventDefault();
-            if (!form.valid()) return;
+            if (!form.valid()) {
+                invalidFields(validator);
+                return;
+            }
             const formData = new FormData(this);
             if (fileInput[0].files.length) {
                 formData.set("image", fileInput[0].files[0]);
@@ -55,8 +61,8 @@ export const administratorHandlers = {
             AdministratorApi.add(formData).done((data) => {
                 resetAdministrationHandlers();
                 administratorHandlers.edit(data);
-                AdministratorApi.getAll().done(administrator => administratorRender(administrator));
-            }).fail(xhr => console.error(xhr));
+                AdministratorApi.getAll().done(administrator => administratorRender(administrator)).fail(AdministratorFailure.get);
+            }).fail(AdministratorFailure.add);
         });
         saveBtn.on("click", () => form.trigger("submit"));
         $("#main-container").html(html);
@@ -107,7 +113,10 @@ export const administratorHandlers = {
         form.on("input change", () => updateAdministratorWarnings(administrator));
         form.on("submit", function (e) {
             e.preventDefault();
-            if (!form.valid()) return;
+            if (!form.valid()){
+                invalidFields(validator);
+                return;
+                }
             const formData = new FormData(this);
             formData.set("_method", "PUT");
             if (fileInput[0].files.length) {
@@ -116,9 +125,9 @@ export const administratorHandlers = {
             AdministratorApi.update(administrator.id, formData).done((data) => {
                 resetAdministrationHandlers();
                 administratorHandlers.edit(data);
-                AuthApi.auth().done((user) => userRender(user));
-                AdministratorApi.getAll().done(administrators => administratorRender(administrators));
-            }).fail(xhr => console.error(xhr));
+                AuthApi.auth().done((user) => userRender(user)).fail(AuthFailure.auth);
+                AdministratorApi.getAll().done(administrators => administratorRender(administrators)).fail(AdministratorFailure.get);
+            }).fail(AdministratorFailure.update);
         });
         saveBtn.on("click", () => form.trigger("submit"));
         if (administrator.role != 'owner') {
@@ -169,10 +178,10 @@ export const administratorHandlers = {
                                 title: "Administrator deleted successfully!",
                                 icon: "success",
                             }).then(() => {
-                                AdministratorApi.getAll().done(administrator => administratorRender(administrator));
+                                AdministratorApi.getAll().done(administrator => administratorRender(administrator)).fail(AdministratorFailure.get);
                                 $("#main-container").html("");
                             });
-                        }).fail(xhr => console.error(xhr));
+                        }).fail(AdministratorFailure.remove);
                     }
                 });
             }

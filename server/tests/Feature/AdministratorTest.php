@@ -98,7 +98,7 @@ class AdministratorTest extends TestCase
             ->getJson('/api/administrator/999')
             ->assertNotFound()
             ->assertJson([
-                'error' => 'Administrator not found',
+                'message' => 'Administrator not found',
             ]);
     }
 
@@ -314,7 +314,7 @@ class AdministratorTest extends TestCase
             )
             ->assertForbidden()
             ->assertJson([
-                'error' => 'Only an owner can modify an owner',
+                'message' => 'Only an owner can modify an owner',
             ]);
     }
 
@@ -500,7 +500,7 @@ class AdministratorTest extends TestCase
             ])
             ->assertNotFound()
             ->assertJson([
-                'error' => 'Administrator not found',
+                'message' => 'Administrator not found',
             ]);
     }
 
@@ -540,7 +540,7 @@ class AdministratorTest extends TestCase
             )
             ->assertForbidden()
             ->assertJson([
-                'error' => 'Owner role cannot be assigned',
+                'message' => 'Owner role cannot be assigned',
             ]);
 
         $manager->refresh();

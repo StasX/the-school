@@ -37,4 +37,5 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'login_rate_limit' => (int) env('LOGIN_RATE_LIMIT', 5),
 ];

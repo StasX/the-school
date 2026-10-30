@@ -89,24 +89,22 @@ jobs:
             --config p/security-audit \
             --json \
             --output semgrep-results/semgrep.json \
-            server \
-            redis \
-            sql
+            --error \
+            server redis sql
 
           EXIT_CODE=$?
 
-          if [ $EXIT_CODE -ne 0 ]; then
+          if [ "$EXIT_CODE" -ne 0 ]; then
             semgrep scan \
               --config p/php \
               --config p/javascript \
               --config p/docker \
               --config p/security-audit \
-              server \
-              redis \
-              sql
+              --error \
+              server redis sql
           fi
 
-          exit $EXIT_CODE
+          exit "$EXIT_CODE"
 
       - name: Upload Semgrep report
         if: always()
@@ -327,7 +325,7 @@ jobs:
 
       - name: Prepare environment
         run: |
-          cp .env.example .env
+          cp ../.env.example .env
           php artisan key:generate
 
       - name: Run PHPUnit
@@ -377,7 +375,7 @@ jobs:
 
       - name: Prepare environment
         run: |
-          cp .env.example .env
+          cp ../.env.example .env
           php artisan key:generate
           mkdir -p storage/infection
 
@@ -450,7 +448,7 @@ jobs:
         run: npm ci
 
       - name: Prepare environment
-        run: cp server/.env.example .env
+        run: cp .env.example .env
 
       - name: Start application
         run: docker compose up -d --build

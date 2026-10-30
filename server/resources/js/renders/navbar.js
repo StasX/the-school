@@ -1,4 +1,5 @@
 import AuthApi from "../api/authApi";
+import AuthFailure from "../messages/authFailure";
 
 export function userRender(user) {
     $('#user-info').text(`${user.name}, ${user.role}`);
@@ -24,8 +25,6 @@ export function navbarRender(user) {
         AuthApi.logout().done(() => {
             location.href = '/';
         })
-            .fail((xhr) => {
-                console.error(xhr);
-            });
+            .fail(AuthFailure.logout);
     });
 }

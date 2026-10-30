@@ -105,7 +105,7 @@ class StudentTest extends TestCase
         $response
             ->assertNotFound()
             ->assertJson([
-                'error' => 'Student not found',
+                'message' => 'Student not found',
             ]);
     }
 

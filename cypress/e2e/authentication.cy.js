@@ -26,7 +26,7 @@ describe('Authentication', () => {
 
         cy.get('#login').submit();
 
-        cy.get('#alerts')
+        cy.get('#alerts>.alert')
             .should('be.visible')
             .and('contain.text', 'Invalid username or password');
 

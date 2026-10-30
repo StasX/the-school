@@ -43,6 +43,8 @@ services:
       BROADCAST_CONNECTION: ${BROADCAST_CONNECTION}
       FILESYSTEM_DISK: ${FILESYSTEM_DISK}
 
+      LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT}
+
     depends_on:
       mariadb:
         condition: service_healthy

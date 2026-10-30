@@ -3,6 +3,9 @@ import school from './school';
 import administration from './administration';
 import notFound from './notFound';
 import AuthApi from './api/authApi';
+import { loginValidationConfig } from './validations/login';
+import {showAlert} from './messages/invalidFields';
+import AuthFailure from './messages/authFailure';
 
 
 $(function () {
@@ -23,16 +26,20 @@ $(function () {
                 if (location.hash) {
                     notFound(user);
                 }
-                break;
         }
     }
 
     $(window).on('hashchange', () => render(user));
 
     if (!location.hash) {
-        $('#login').on('submit', function (e) {
+        const form = $('#login');
+        form.validate(loginValidationConfig);
+        form.on('submit', function (e) {
             e.preventDefault();
-
+            if (!form.valid()) {
+                showAlert('Too many requests. Please try again later.');;
+                return;
+            }
             const data = {
                 email: $('#user').val(),
                 password: $('#password').val()
@@ -45,26 +52,12 @@ $(function () {
                     }
                 });
                 location.hash = '#!school';
-            })
-                .fail(function (xhr) {
-                    const error = xhr.status === 401
-                        ? 'Invalid username or password'
-                        : 'An error occurred. Please try again later.';
-
-                    $('#alerts').html(`
-                        <div class="alert alert-danger" role="alert">
-                            ${error}
-                        </div>
-                    `);
-                });
+            }).fail(AuthFailure.login);
         });
     } else {
         AuthApi.auth().done(function (data) {
-                render(data);
-            })
-            .fail(function () {
-                location.hash = '';
-                location.reload();
-            });
+            render(data);
+        })
+            .fail(AuthFailure.auth);
     }
 });

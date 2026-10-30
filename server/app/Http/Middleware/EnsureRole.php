@@ -24,13 +24,13 @@ class EnsureRole
         if (! $administrator instanceof Administrator) {
             return response()->json([
                 'error' => 'Unauthorized',
-            ], 401);
+            ], Response::HTTP_UNAUTHORIZED);
         }
 
         if (! in_array($administrator->Role, $roles, true)) {
             return response()->json([
                 'error' => 'Forbidden',
-            ], 403);
+            ], Response::HTTP_FORBIDDEN);
         }
 
         return $next($request);

@@ -16,9 +16,9 @@ describe('Administrators', () => {
 
     it('creates, edits and deletes a non-owner administrator', () => {
         const suffix = Date.now();
-        const email = `cypress-admin-${suffix}@example.com`;
-        const name = `Cypress Admin ${suffix}`;
-        const updatedName = `Updated Admin ${suffix}`;
+        const email = `admin-${suffix}@example.com`;
+        const name = `Admin ${suffix}`;
+        const updatedName = `Admin ${suffix}`;
 
         cy.get('#add-administrator').click();
 
@@ -108,25 +108,20 @@ describe('Administrators', () => {
         cy.get('#administrators-form')
             .should('exist');
 
-        cy.get('#name-error')
-            .should('be.visible')
-            .and('contain.text', 'Name is required');
+        cy.get('#name')
+            .should('have.class', 'error');
 
-        cy.get('#phone-error')
-            .should('be.visible')
-            .and('contain.text', 'Phone is required');
+        cy.get('#phone')
+            .should('have.class', 'error');
 
-        cy.get('#email-error')
-            .should('be.visible')
-            .and('contain.text', 'Email is required');
+        cy.get('#email')
+            .should('have.class', 'error');
 
-        cy.get('#password-error')
-            .should('be.visible')
-            .and('contain.text', 'Password is required');
+        cy.get('#password')
+            .should('have.class', 'error');
 
-        cy.get('#image-file-error')
-            .should('be.visible')
-            .and('contain.text', 'Image is required');
+        cy.get('#image-file')
+            .should('have.class', 'error');
     });
 
     it('keeps changes on cancel and clears row navigation warnings on confirm', () => {

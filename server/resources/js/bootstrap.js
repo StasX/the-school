@@ -54,25 +54,30 @@ $.validator.addMethod(
                 return $(this).val();
             })
             .get();
-        return values.every(Number.isInteger);
+
+        return values.every(val =>
+            /^\d+$/.test(val) &&
+            Number.isSafeInteger(Number(val)) &&
+            Number(val) > 0
+        );
     },
     "Courses must contain only integer IDs."
 );
 
 $.validator.addMethod(
-        "phone",
-        function (value, element) {
-            if (this.optional(element)) {
-                return true;
-            }
+    "phone",
+    function (value, element) {
+        if (this.optional(element)) {
+            return true;
+        }
 
-            const digits = value.replace(/\D/g, "");
+        const digits = value.replace(/\D/g, "");
 
-            return (
-                /^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/.test(value) &&
-                digits.length >= 7 &&
-                digits.length <= 20
-            );
-        },
-        "Enter a valid phone number."
-    );
+        return (
+            /^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/.test(value) &&
+            digits.length >= 7 &&
+            digits.length <= 16
+        );
+    },
+    "Enter a valid phone number."
+);

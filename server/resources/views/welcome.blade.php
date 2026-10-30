@@ -32,12 +32,12 @@
                     <div class="row">
                         <div class="mb-3">
                             <label class="form-label" for="user">Username</label>
-                            <input type="text" id="user" class="form-control" placeholder="Username"
+                            <input type="text" id="user" name="user" class="form-control" placeholder="Username"
                                 spellcheck="false" />
                         </div>
                         <div class="mb-3">
                             <label class="form-label" for="password">Password</label>
-                            <input type="password" id="password" class="form-control" placeholder="Password" />
+                            <input type="password" id="password" name="password" class="form-control" placeholder="Password" />
                         </div>
                     </div>
                     <div class="row">

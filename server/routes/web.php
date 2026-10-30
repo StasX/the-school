@@ -27,7 +27,7 @@ Route::prefix('api')->group(function () {
         return response('', Response::HTTP_OK);
     });
 
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
     Route::get('/help', function () {
                 if (! Auth::check()) {
