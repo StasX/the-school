@@ -7,7 +7,13 @@ max_attempts=30
 attempt=1
 
 while [ "$attempt" -le "$max_attempts" ]; do
-    if php -r "new PDO('mysql:host=${DB_HOST};port=${DB_PORT}', '${DB_USERNAME}', '${DB_PASSWORD}');" >/dev/null 2>&1; then
+    if php -r '
+        new PDO(
+            "mysql:host=" . getenv("DB_HOST") . ";port=" . getenv("DB_PORT"),
+            getenv("DB_USERNAME"),
+            getenv("DB_PASSWORD")
+        );
+    ' >/dev/null 2>&1; then
         echo "Database is ready!"
         break
     fi
