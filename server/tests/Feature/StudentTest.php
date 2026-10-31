@@ -560,7 +560,16 @@ class StudentTest extends TestCase
         );
     }
 
-    public function test_updating_student_with_empty_courses_removes_all_courses(): void
+    public static function emptyCourseValues(): array
+    {
+        return [
+            'JSON empty array' => [[]],
+            'multipart empty field' => [''],
+        ];
+    }
+
+    #[DataProvider('emptyCourseValues')]
+    public function test_updating_student_with_empty_courses_removes_all_courses(array|string $coursesValue): void
     {
         $student = $this->createStudent();
 
@@ -579,7 +588,7 @@ class StudentTest extends TestCase
                 'email' => $student->Email,
                 'name' => $student->Name,
                 'phone' => $student->Phone,
-                'courses' => [],
+                'courses' => $coursesValue,
             ]
         )->assertOk();
 

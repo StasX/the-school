@@ -117,7 +117,9 @@ class StudentController extends Controller
             'Phone' => $validated['phone'],
         ];
 
-        $courses = $validated['courses'] ?? null;
+        $courses = array_key_exists('courses', $validated)
+            ? ($validated['courses'] ?? [])
+            : null;
 
         $oldImage = $student->Image;
         $newImage = null;

@@ -115,6 +115,10 @@ export const studentHandlers = {
             }
             const formData = new FormData(this);
             formData.set("_method", "PUT");
+            // Multipart forms omit unchecked checkboxes; explicitly request clearing.
+            if (!formData.has("courses[]")) {
+                formData.set("courses", "");
+            }
             if (fileInput[0].files.length) {
                 formData.set("image", fileInput[0].files[0]);
             }

@@ -48,6 +48,7 @@ class StudentRules
             'image' => CommonRules::image(false, 500, 250),
             'courses' => [
                 'sometimes',
+                'nullable',
                 'array',
             ],
             'courses.*' => [
