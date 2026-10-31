@@ -19,8 +19,8 @@ Route::get('/upload/{filename}', function (string $filename) {
     $notFoundPath = $disk->path('NotFound.png');
 
     $path = ($disk->exists($filename)) ? $filePath : $notFoundPath;
-    return response()->file($path);
-});
+    return response()->file($path, ['Cache-Control' => 'no-store'])->setPrivate();
+})->middleware('auth');
 
 Route::prefix('api')->group(function () {
     Route::get('/health', function () {
