@@ -70,7 +70,7 @@ export const studentHandlers = {
             }).fail(StudentFailure.add);
         });
         saveBtn.on("click", () => form.trigger("submit"));
-        CourseApi.getAll().done((data) => $.each(data, (i, course) => {
+        CourseApi.getOptions().done((data) => $.each(data, (i, course) => {
             const $course = $(courseCheckboxTemplate);
             const input = $course.find("input");
             input.val(course.id);
@@ -133,7 +133,7 @@ export const studentHandlers = {
         emailInput.val(student.email);
         imageElement.attr("src", student.image);
         const subscriptions = student.courses.map(obj => obj.id);
-        CourseApi.getAll().done(data => $.each(data, (id, course) => {
+        CourseApi.getOptions().done(data => $.each(data, (id, course) => {
             const $course = $(courseCheckboxTemplate);
             const input = $course.find("input");
             input.val(course.id);

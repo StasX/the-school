@@ -169,6 +169,14 @@ TheSchool/
 
 All endpoints use the `/api` prefix. Except for login, all endpoints require an authenticated administrator session. Access is further restricted by role.
 
+List endpoints (`GET /api/student`, `GET /api/course`, and
+`GET /api/administrator`) return 20 records per page, ordered by ID. Use
+`?page=2` to request another page. Responses contain `data`, `links`, and `meta`
+(including `current_page`, `last_page`, `per_page`, and `total`). Invalid page
+values return HTTP 422. Student and course lists omit relationships; retrieve an
+individual record to load its courses or students. The management screens provide
+Previous/Next controls, and enrollment forms load course choices across all pages.
+
 ### Authentication
 
 | Method | Endpoint | Description | Access |

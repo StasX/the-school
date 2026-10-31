@@ -1,7 +1,14 @@
+import { renderPagination } from '../utils/pagination';
+import AdministratorApi from '../api/administratorApi';
+import { setAdministrationWarningsHandler } from '../handlers/administration';
 import administratorListItemTemplate from "../../templates/partials/administratorListItem.html?raw";
 import { administratorHandlers } from "../handlers/administrator";
 
-export function administratorRender(data) {
+export function administratorRender(response) {
+    const data = response.data;
+    renderPagination('administrators', response.meta, page =>
+        AdministratorApi.getAll(page).done(administratorRender)
+    );
     $("#administrators-container").html("");
     $.each(data, (i, administrator) => {
         const html = $(administratorListItemTemplate);
@@ -13,4 +20,7 @@ export function administratorRender(data) {
         html.on("click", clickHandler);
         $("#administrators-container").append(html);
     });
+    if ($('#administrators-container').data('unsaved')) {
+        setAdministrationWarningsHandler();
+    }
 }

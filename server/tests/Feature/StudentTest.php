@@ -97,16 +97,15 @@ class StudentTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonCount(3)
+            ->assertJsonCount(3, 'data')
             ->assertJsonStructure([
-                '*' => [
+                'data' => ['*' => [
                     'id',
                     'email',
                     'name',
                     'phone',
                     'image',
-                    'courses',
-                ],
+                ]],
             ]);
     }
 

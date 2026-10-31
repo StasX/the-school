@@ -48,18 +48,18 @@ class AdministratorTest extends TestCase
         $this->actingAs($owner)
             ->getJson('/api/administrator')
             ->assertOk()
-            ->assertJsonCount(2)
+            ->assertJsonCount(2, 'data')
             ->assertJsonStructure([
-                '*' => [
+                'data' => ['*' => [
                     'id',
                     'email',
                     'name',
                     'phone',
                     'role',
                     'image',
-                ],
+                ]],
             ])
-            ->assertJsonMissingPath('0.password');
+            ->assertJsonMissingPath('data.0.password');
     }
 
     public function test_owner_can_get_administrator_by_id(): void

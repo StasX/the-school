@@ -1,10 +1,17 @@
+import { renderPagination } from '../utils/pagination';
+import CourseApi from '../api/courseApi';
+import { setSchoolWarningsHandler } from '../handlers/school';
 import { courseHandlers } from '../handlers/course';
 import courseListItemTemplate from "../../templates/partials/courseListItem.html?raw";
 import courseInfoTemplate from "../../templates/partials/courseInfo.html?raw";
 import courseMemberTemplate from "../../templates/partials/courseMember.html?raw";
 import { studentHandlers } from '../handlers/student';
 
-export function courseRender(data) {
+export function courseRender(response) {
+    const data = response.data;
+    renderPagination('courses', response.meta, page =>
+        CourseApi.getAll(page).done(courseRender)
+    );
     $("#courses-container").html("");
     $.each(data, (i, course) => {
         const html = $(courseListItemTemplate);
@@ -16,6 +23,9 @@ export function courseRender(data) {
         html.on("click", clickHandler);
         $("#courses-container").append(html);
     });
+    if ($('#courses-container').data('unsaved')) {
+        setSchoolWarningsHandler();
+    }
 }
 
 export function courseInfoRender(data,admin) {

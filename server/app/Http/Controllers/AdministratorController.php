@@ -56,13 +56,17 @@ class AdministratorController extends Controller
 
     //------------------------------------------------------------------------
 
-    public function getAll(): JsonResponse
+    public function getAll(Request $request): JsonResponse
     {
+        $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+        ]);
+
         /** @var Administrator $admin */
         $admin = Auth::user();
 
         return AdministratorResource::collection(
-            Administrator::visibleTo($admin)->get()
+            Administrator::visibleTo($admin)->orderBy('Administrator_ID')->paginate(20)
         )->response();
     }
 

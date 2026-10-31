@@ -56,10 +56,14 @@ class StudentController extends Controller
 
     //------------------------------------------------------------------------
 
-    public function getAll(): JsonResponse
+    public function getAll(Request $request): JsonResponse
     {
+        $request->validate([
+            'page' => ['sometimes', 'integer', 'min:1'],
+        ]);
+
         return StudentResource::collection(
-            Student::with('courses')->get()
+            Student::orderBy('Student_ID')->paginate(20)
         )->response();
     }
 

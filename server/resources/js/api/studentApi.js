@@ -1,10 +1,11 @@
 // api/student.js
 
 const StudentApi = {
-    getAll() {
+    getAll(page = 1) {
         return $.ajax({
             url: '/api/student',
-            method: 'GET'
+            method: 'GET',
+            data: { page }
         });
     },
 
