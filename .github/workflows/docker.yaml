@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   docker:
-    name: Build, Scan and Push
+    name: Docker (${{ matrix.name }})
     runs-on: ubuntu-latest
 
     strategy:

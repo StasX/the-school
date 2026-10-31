@@ -321,7 +321,7 @@ development, and tests all use the SQL script as the schema source; Laravel
 migrations are not used. Queues run synchronously by default, so no Laravel jobs
 tables are required.
 
-GitHub Actions runs this stack in the `PHPUnit - MariaDB (production schema)` job,
+GitHub Actions runs this stack in the `Phpunit` job,
 uploads its JUnit report and Docker logs, and requires it to pass before Cypress
 runs. Infection also runs against MariaDB in a separate CI job. The old SQLite
 PHPUnit job has been removed.

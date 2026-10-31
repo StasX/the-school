@@ -21,7 +21,7 @@ on:
 
 jobs:
   checkov:
-    name: Checkov - ${{ matrix.name }}
+    name: Checkov (${{ matrix.name }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -288,8 +288,8 @@ jobs:
           path: server/storage/php-cs-fixer/php-cs-fixer.txt
           if-no-files-found: warn
 
-  phpunit-mariadb:
-    name: PHPUnit - MariaDB (production schema)
+  phpunit:
+    name: PHPUnit
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -326,7 +326,7 @@ jobs:
         run: docker compose -f docker-compose.test.yml --profile mutation down -v --remove-orphans
 
   infection:
-    name: Infection - MariaDB
+    name: Infection
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -388,11 +388,11 @@ jobs:
         run: npm run build
 
   cypress:
-    name: Cypress E2E
+    name: Cypress
     runs-on: ubuntu-latest
     needs:
       - checkov
-      - phpunit-mariadb
+      - phpunit
       - phpstan
       - phpcs
       - php-cs-fixer
