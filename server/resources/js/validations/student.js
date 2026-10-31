@@ -15,7 +15,8 @@ export function studentValidationConfig({
             },
             email: {
                 required: true,
-                email: true
+                email: true,
+                maxlength: 64,
             },
             image: {
                 required: !edit,
@@ -43,7 +44,8 @@ export function studentValidationConfig({
             },
             email: {
                 required: "Email is required.",
-                email: "Enter a valid email address."
+                email: "Enter a valid email address.",
+                maxlength: "Email must not exceed 64 characters.",
             },
             image: {
                 required: "Image is required.",

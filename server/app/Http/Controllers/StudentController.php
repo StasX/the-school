@@ -96,6 +96,7 @@ class StudentController extends Controller
                 'required',
                 'email',
                 'unique:students,Email',
+                'max:64',
             ],
             'name' => [
                 'required',
@@ -182,7 +183,7 @@ class StudentController extends Controller
                 'email',
                 Rule::unique('students', 'Email')
                     ->ignore($id, 'Student_ID'),
-                'max:60',
+                'max:64',
                 'min:7',
             ],
             'name' => [
@@ -273,8 +274,10 @@ class StudentController extends Controller
             return response('', Response::HTTP_NOT_FOUND);
         }
         $oldImage = $student->Image;
-        $student->courses()->detach();
-        $student->delete();
+        DB::transaction(function () use ($student): void {
+            $student->courses()->detach();
+            $student->delete();
+        });
         $this->cleanupImage($oldImage);
 
         return response('', Response::HTTP_NO_CONTENT);
