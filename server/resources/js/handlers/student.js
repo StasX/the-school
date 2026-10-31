@@ -13,10 +13,10 @@ import { invalidFields } from "../messages/invalidFields";
 import StudentFailure from "../messages/studentFailure";
 
 function isStudentFormChanged(student) {
-    const currentCourses = (student?.courses || []).map(obj => obj.id);
+    const currentCourses = (student?.courses || []).map(obj => String(obj.id));
     const selectedCourses = [];
-    $('input[name="course[]"]:checked').each(function () {
-        selectedCourses.push($(this).val());
+    $('#students-form input[name="courses[]"]:checked').each(function () {
+        selectedCourses.push(String($(this).val()));
     });
     return (
         (student?.name ?? "") !== $("#name").val() ||
@@ -70,7 +70,7 @@ export const studentHandlers = {
             }).fail(StudentFailure.add);
         });
         saveBtn.on("click", () => form.trigger("submit"));
-        CourseApi.getAll().done((data) => $.each(data, (i, course) => {
+        CourseApi.getOptions().done((data) => $.each(data, (i, course) => {
             const $course = $(courseCheckboxTemplate);
             const input = $course.find("input");
             input.val(course.id);
@@ -115,6 +115,10 @@ export const studentHandlers = {
             }
             const formData = new FormData(this);
             formData.set("_method", "PUT");
+            // Multipart forms omit unchecked checkboxes; explicitly request clearing.
+            if (!formData.has("courses[]")) {
+                formData.set("courses", "");
+            }
             if (fileInput[0].files.length) {
                 formData.set("image", fileInput[0].files[0]);
             }
@@ -133,7 +137,7 @@ export const studentHandlers = {
         emailInput.val(student.email);
         imageElement.attr("src", student.image);
         const subscriptions = student.courses.map(obj => obj.id);
-        CourseApi.getAll().done(data => $.each(data, (id, course) => {
+        CourseApi.getOptions().done(data => $.each(data, (id, course) => {
             const $course = $(courseCheckboxTemplate);
             const input = $course.find("input");
             input.val(course.id);

@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Administrator;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 class AdministratorTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     protected function setUp(): void
     {
@@ -34,6 +34,25 @@ class AdministratorTest extends TestCase
         ], $attributes));
     }
 
+    public function test_owner_can_create_administrator_with_a_short_valid_email(): void
+    {
+        $owner = $this->createAdministrator(['Role' => 'owner']);
+
+        $this->actingAs($owner)
+            ->postJson('/api/administrator', [
+                'email' => 'a@b.co',
+                'name' => 'Short Email',
+                'role' => 'sales',
+                'phone' => '0500000000',
+                'password' => 'password123',
+                'image' => UploadedFile::fake()->image('administrator.png', 100, 100),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('email', 'a@b.co');
+
+        $this->assertDatabaseHas('administrators', ['Email' => 'a@b.co']);
+    }
+
     public function test_owner_can_list_administrators(): void
     {
         $owner = $this->createAdministrator([
@@ -48,18 +67,18 @@ class AdministratorTest extends TestCase
         $this->actingAs($owner)
             ->getJson('/api/administrator')
             ->assertOk()
-            ->assertJsonCount(2)
+            ->assertJsonCount(2, 'data')
             ->assertJsonStructure([
-                '*' => [
+                'data' => ['*' => [
                     'id',
                     'email',
                     'name',
                     'phone',
                     'role',
                     'image',
-                ],
+                ]],
             ])
-            ->assertJsonMissingPath('0.password');
+            ->assertJsonMissingPath('data.0.password');
     }
 
     public function test_owner_can_get_administrator_by_id(): void

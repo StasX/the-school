@@ -1,13 +1,15 @@
-import { invalidCredentials, showAlert } from "./invalidFields";
+import { showAlert } from "./invalidFields";
+import { invalidCredentialsMessage } from './loginFailure';
 
 const AuthFailure = {
     login(xhr) {
         switch (xhr.status) {
             case 401:
-                showAlert('Invalid username or password');
+                showAlert(invalidCredentialsMessage);
                 break;
             case 429:
                 showAlert('Too many requests. Please try again later.');
+                break;
             default:
                 showAlert('An error occurred. Please try again later.');
         }

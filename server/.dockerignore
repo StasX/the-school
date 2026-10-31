@@ -7,6 +7,7 @@ public/css/
 public/images/
 public/manifest.json
 database/database.sqlite
+public/hot
 *.log
 .env
 .env.example

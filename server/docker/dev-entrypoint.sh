@@ -7,7 +7,6 @@ mkdir -p storage/app/private storage/app/public storage/framework/cache/data \
 
 composer install --prefer-dist --no-interaction --no-progress
 php artisan config:clear
-php artisan migrate --force
 
 chown -R www-data:www-data storage bootstrap/cache uploads
 

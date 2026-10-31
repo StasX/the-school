@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Administrator;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class RoleAuthorizationTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     private function createAdministrator(string $role): Administrator
     {

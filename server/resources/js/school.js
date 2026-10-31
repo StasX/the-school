@@ -14,12 +14,12 @@ export default function school(user) {
     navbarRender(user);
     StudentApi.getAll().done((data) => {
         studentRender(data);
-        $('#total-students').text(data.length);
+        $('#total-students').text(data.meta.total);
     }).fail(StudentFailure.get);
     $("#add-student").on("click", studentHandlers.add);
     CourseApi.getAll().done((data) => {
         courseRender(data);
-        $('#total-courses').text(data.length);
+        $('#total-courses').text(data.meta.total);
     }).fail(CourseFailure.get);
     $("#add-course").on("click", courseHandlers.add);
 

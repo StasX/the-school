@@ -5,18 +5,20 @@ namespace Tests\Feature;
 use App\Models\Administrator;
 use App\Models\Course;
 use App\Models\Student;
+use Closure;
 use Illuminate\Database\QueryException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use PDOException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class StudentTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     private Administrator $owner;
 
@@ -28,6 +30,29 @@ class StudentTest extends TestCase
 
         $this->owner = $this->getOwner();
         $this->actingAs($this->owner);
+    }
+
+    private function failQuery(string $prefix, string $message): Closure
+    {
+        $enabled = true;
+        DB::connection()->beforeExecuting(function (
+            $query,
+            $bindings,
+            $connection
+        ) use (
+            &$enabled,
+            $prefix,
+            $message
+        ): void {
+            $normalized = strtolower(str_replace(['`', '"'], '', $query));
+            if ($enabled && str_starts_with($normalized, $prefix)) {
+                throw new QueryException($connection->getName(), $query, $bindings, new PDOException($message));
+            }
+        });
+
+        return function () use (&$enabled): void {
+            $enabled = false;
+        };
     }
 
     private function getOwner(): Administrator
@@ -72,16 +97,15 @@ class StudentTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertJsonCount(3)
+            ->assertJsonCount(3, 'data')
             ->assertJsonStructure([
-                '*' => [
+                'data' => ['*' => [
                     'id',
                     'email',
                     'name',
                     'phone',
                     'image',
-                    'courses',
-                ],
+                ]],
             ]);
     }
 
@@ -115,10 +139,7 @@ class StudentTest extends TestCase
     {
         $this->withoutExceptionHandling();
         $course = $this->createCourse();
-        DB::unprepared(
-            'CREATE TEMP TRIGGER fail_enrollment BEFORE INSERT ON school ' .
-            "BEGIN SELECT RAISE(ABORT, 'Enrollment failed'); END"
-        );
+        $restoreQueries = $this->failQuery('insert into school', 'Enrollment failed');
 
         try {
             $this->postJson('/api/student', [
@@ -132,7 +153,7 @@ class StudentTest extends TestCase
         } catch (QueryException $exception) {
             $this->assertStringContainsString('Enrollment failed', $exception->getMessage());
         } finally {
-            DB::unprepared('DROP TRIGGER fail_enrollment');
+            $restoreQueries();
         }
 
         $this->assertDatabaseMissing('students', ['Email' => 'student@example.com']);
@@ -224,6 +245,34 @@ class StudentTest extends TestCase
         ];
     }
 
+    public function test_student_with_short_valid_email_can_be_created_and_updated(): void
+    {
+        $response = $this->post('/api/student', [
+            'email' => 'a@b.co',
+            'name' => 'Test Student',
+            'phone' => '0501234567',
+            'image' => UploadedFile::fake()->image('student.jpg', 100, 100),
+        ]);
+
+        $response->assertCreated();
+        $id = $response->json('id');
+
+        $this->putJson("/api/student/$id", [
+            'email' => 'a@b.co',
+            'name' => 'Updated Student',
+            'phone' => '0501234567',
+        ])
+            ->assertOk()
+            ->assertJsonPath('email', 'a@b.co')
+            ->assertJsonPath('name', 'Updated Student');
+
+        $this->assertDatabaseHas('students', [
+            'Student_ID' => $id,
+            'Email' => 'a@b.co',
+            'Name' => 'Updated Student',
+        ]);
+    }
+
     public function test_student_can_be_created_with_courses(): void
     {
         $courses = collect([
@@ -302,10 +351,7 @@ class StudentTest extends TestCase
         $newCourse = $this->createCourse();
         $student->courses()->attach($oldCourse->Course_ID);
         Storage::disk('uploads')->put('test.jpg', 'original image');
-        DB::unprepared(
-            'CREATE TEMP TRIGGER fail_enrollment BEFORE INSERT ON school ' .
-            "BEGIN SELECT RAISE(ABORT, 'Enrollment failed'); END"
-        );
+        $restoreQueries = $this->failQuery('insert into school', 'Enrollment failed');
 
         try {
             $this->putJson("/api/student/{$student->Student_ID}", [
@@ -319,7 +365,7 @@ class StudentTest extends TestCase
         } catch (QueryException $exception) {
             $this->assertStringContainsString('Enrollment failed', $exception->getMessage());
         } finally {
-            DB::unprepared('DROP TRIGGER fail_enrollment');
+            $restoreQueries();
         }
 
         $this->assertSame($original, $student->refresh()->getAttributes());
@@ -396,10 +442,7 @@ class StudentTest extends TestCase
         $course = $this->createCourse();
         $student->courses()->attach($course->Course_ID);
         Storage::disk('uploads')->put('test.jpg', 'original image');
-        DB::unprepared(
-            'CREATE TEMP TRIGGER fail_student_deletion BEFORE DELETE ON students ' .
-            "BEGIN SELECT RAISE(ABORT, 'Student deletion failed'); END"
-        );
+        $restoreQueries = $this->failQuery('delete from students', 'Student deletion failed');
 
         try {
             $this->deleteJson("/api/student/{$student->Student_ID}");
@@ -407,7 +450,7 @@ class StudentTest extends TestCase
         } catch (QueryException $exception) {
             $this->assertStringContainsString('Student deletion failed', $exception->getMessage());
         } finally {
-            DB::unprepared('DROP TRIGGER fail_student_deletion');
+            $restoreQueries();
         }
 
         $this->assertDatabaseHas('students', ['Student_ID' => $student->Student_ID]);
@@ -545,7 +588,16 @@ class StudentTest extends TestCase
         );
     }
 
-    public function test_updating_student_with_empty_courses_removes_all_courses(): void
+    public static function emptyCourseValues(): array
+    {
+        return [
+            'JSON empty array' => [[]],
+            'multipart empty field' => [''],
+        ];
+    }
+
+    #[DataProvider('emptyCourseValues')]
+    public function test_updating_student_with_empty_courses_removes_all_courses(array|string $coursesValue): void
     {
         $student = $this->createStudent();
 
@@ -564,7 +616,7 @@ class StudentTest extends TestCase
                 'email' => $student->Email,
                 'name' => $student->Name,
                 'phone' => $student->Phone,
-                'courses' => [],
+                'courses' => $coursesValue,
             ]
         )->assertOk();
 

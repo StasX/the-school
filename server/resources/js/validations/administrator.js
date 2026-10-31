@@ -16,7 +16,8 @@ export function administratorValidationConfig({
             },
             email: {
                 required: true,
-                email: true
+                email: true,
+                maxlength: 64
             },
             role: {
                 required: !edit,

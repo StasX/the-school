@@ -7,10 +7,55 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  release-checks:
+    name: Verify release commit and CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Require tag to point to latest main commit
+        id: commit
+        shell: bash
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          release_sha=$(git rev-parse HEAD)
+          if [ "$release_sha" != "$(git rev-parse origin/main)" ]; then
+            echo "::error::Release tag must point to the latest main commit."
+            exit 1
+          fi
+          echo "sha=$release_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Require successful main CI for the tagged commit
+        uses: actions/github-script@v7
+        env:
+          RELEASE_SHA: ${{ steps.commit.outputs.sha }}
+        with:
+          script: |
+            const { data } = await github.rest.actions.listWorkflowRuns({
+              ...context.repo,
+              workflow_id: 'main.yaml',
+              branch: 'main',
+              event: 'push',
+              head_sha: process.env.RELEASE_SHA,
+              per_page: 100,
+            });
+            const run = data.workflow_runs
+              .sort((a, b) => b.run_number - a.run_number)[0];
+            if (!run || run.status !== 'completed' || run.conclusion !== 'success') {
+              core.setFailed(
+                `Main CI must complete successfully for ${process.env.RELEASE_SHA}. ` +
+                (run ? `Current result: ${run.status}/${run.conclusion}. ${run.html_url}` : 'No matching push run found.') +
+                ' Rerun this release after CI passes.'
+              );
+            }
+
   docker:
-    name: Build, Scan and Push
+    name: Docker (${{ matrix.name }})
+    needs: release-checks
     runs-on: ubuntu-latest
 
     strategy:
@@ -35,31 +80,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Check tag points to latest main commit
-        id: branch_check
-        shell: bash
-        run: |
-          git fetch origin main:refs/remotes/origin/main
-
-          if [ "${{ github.sha }}" = "$(git rev-parse origin/main)" ]; then
-            echo "on_main=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "on_main=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Set up Docker Buildx
-        if: steps.branch_check.outputs.on_main == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        if: steps.branch_check.outputs.on_main == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Generate image metadata
-        if: steps.branch_check.outputs.on_main == 'true'
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -71,7 +101,6 @@ jobs:
             type=raw,value=latest
 
       - name: Build image for scanning
-        if: steps.branch_check.outputs.on_main == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -81,7 +110,6 @@ jobs:
           tags: local-${{ matrix.name }}:${{ github.sha }}
 
       - name: Scan image with Trivy
-        if: steps.branch_check.outputs.on_main == 'true'
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: local-${{ matrix.name }}:${{ github.sha }}
@@ -91,7 +119,6 @@ jobs:
           exit-code: "1"
 
       - name: Push scanned image
-        if: steps.branch_check.outputs.on_main == 'true'
         shell: bash
         run: |
           while IFS= read -r tag; do

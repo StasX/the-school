@@ -1,10 +1,11 @@
 // api/student.js
 
 const AdministratorApi = {
-    getAll() {
+    getAll(page = 1) {
         return $.ajax({
             url: '/api/administrator',
-            method: 'GET'
+            method: 'GET',
+            data: { page }
         });
     },
 

@@ -20,7 +20,6 @@ class AuthController extends Controller
                 'required',
                 'email',
                 'max:64',
-                'min:7',
             ],
             'password' => [
                 'required',
@@ -32,7 +31,7 @@ class AuthController extends Controller
 
         if ($validator->fails()) {
             return response()->json([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ], Response::HTTP_UNAUTHORIZED);
         }
 
@@ -51,7 +50,7 @@ class AuthController extends Controller
 
         if ($users->count() !== 1) {
             return response()->json([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ], Response::HTTP_UNAUTHORIZED);
         }
 
@@ -62,7 +61,7 @@ class AuthController extends Controller
             ! Hash::check($password, $user->Password)
         ) {
             return response()->json([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ], Response::HTTP_UNAUTHORIZED);
         }
 

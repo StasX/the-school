@@ -48,6 +48,33 @@ describe('Navigation', () => {
             .should('be.visible');
     });
 
+    [
+        { from: 'school', to: 'administration', add: '#add-student', form: '#students-form', link: 'Administration' },
+        { from: 'school', to: 'administration', add: '#add-course', form: '#courses-form', link: 'Administration' },
+        { from: 'administration', to: 'school', add: '#add-administrator', form: '#administrators-form', link: 'School' },
+    ].forEach(({ from, to, add, form, link }) => {
+        it(`protects unsaved ${form} when switching sections`, () => {
+            cy.visit(`/#!${from}`);
+            cy.get(add).click();
+            cy.get('#name').type('Unsaved changes');
+
+            cy.contains('a', link).click();
+            cy.contains('.swal2-popup', 'all changes will be discarded').should('be.visible');
+            cy.contains('.swal2-popup button', 'Cancel').click();
+
+            cy.location('hash').should('eq', `#!${from}`);
+            cy.get(form).should('be.visible');
+            cy.get('#name').should('have.value', 'Unsaved changes');
+
+            cy.contains('a', link).click();
+            cy.contains('.swal2-popup button', 'Continue').click();
+            cy.location('hash').should('eq', `#!${to}`);
+            cy.get(form).should('not.exist');
+            cy.get(to === 'school' ? '#students-container' : '#administrators-container')
+                .should('be.visible');
+        });
+    });
+
     it('displays not found page for an unknown route', () => {
         cy.visit('/#!unknown');
 

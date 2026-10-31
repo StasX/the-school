@@ -49,7 +49,7 @@ $.validator.addMethod(
     "integerArray",
     function (value, element) {
         const values = $(element.form)
-            .find('input[name="course[]"]:checked')
+            .find('input[name="courses[]"]:checked')
             .map(function () {
                 return $(this).val();
             })

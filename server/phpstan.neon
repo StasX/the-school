@@ -4,6 +4,10 @@ includes:
 parameters:
     level: 10
 
+    # Infer Eloquent column types from the SQL schema used by MariaDB.
+    squashedMigrationsPath:
+        - %currentWorkingDirectory%/../sql
+
     paths:
         - app
 

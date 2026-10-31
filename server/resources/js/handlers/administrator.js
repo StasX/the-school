@@ -78,7 +78,7 @@ export const administratorHandlers = {
         const buttons = html.filter("#btn-row");
         const saveBtn = buttons.find("#save-administrator");
         const form = html.filter("#administrators-form");
-        form.validate(administratorValidationConfig({
+        const validator = form.validate(administratorValidationConfig({
             edit: true,
             owner: administrator.role === "owner"
         }));

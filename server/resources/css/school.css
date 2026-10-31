@@ -5,6 +5,62 @@
     height: 36px;
 }
 
+.col:has(> .school-list-panel) {
+    display: flex;
+}
+
+.school-list-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.school-list-panel > .row:last-child {
+    flex-grow: 1;
+}
+
+.school-list-panel > .row:last-child > .col {
+    display: flex;
+    flex-direction: column;
+}
+
+.school-list-panel nav[id$="-pagination"] {
+    margin-top: auto !important;
+    padding-top: 0.5rem;
+}
+
+.pagination-light {
+    margin-inline: 8px;
+    --bs-pagination-color: var(--bs-dark);
+    --bs-pagination-bg: var(--bs-light);
+    --bs-pagination-border-color: var(--bs-gray-300);
+    --bs-pagination-hover-color: #000;
+    --bs-pagination-hover-bg: #d3d4d5;
+    --bs-pagination-hover-border-color: #c6c7c8;
+    --bs-pagination-focus-color: var(--bs-dark);
+    --bs-pagination-focus-bg: var(--bs-gray-200);
+    --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba(33, 37, 41, 0.25);
+    --bs-pagination-active-color: var(--bs-dark);
+    --bs-pagination-active-bg: var(--bs-gray-300);
+    --bs-pagination-active-border-color: var(--bs-gray-300);
+    --bs-pagination-disabled-color: var(--bs-gray-600);
+    --bs-pagination-disabled-bg: var(--bs-light);
+    --bs-pagination-disabled-border-color: var(--bs-gray-300);
+}
+
+.pagination-light > .page-item {
+    flex: 1;
+}
+
+.pagination-light .page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 36px;
+    text-align: center;
+}
+
 .management>.row:first-child {
     text-align: center;
 }

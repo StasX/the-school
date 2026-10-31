@@ -1,9 +1,16 @@
+import { renderPagination } from '../utils/pagination';
+import StudentApi from '../api/studentApi';
+import { setSchoolWarningsHandler } from '../handlers/school';
 import { studentHandlers } from '../handlers/student';
 import studentListItemTemplate from "../../templates/partials/studentListItem.html?raw";
 import studentInfoTemplate from "../../templates/partials/studentInfo.html?raw";
 import memberItemTemplate from "../../templates/partials/memberOf.html?raw";
 
-export function studentRender(data) {
+export function studentRender(response) {
+    const data = response.data;
+    renderPagination('students', response.meta, page =>
+        StudentApi.getAll(page).done(studentRender)
+    );
     $("#students-container").html('');
     $.each(data, (i, student) => {
         const html = $(studentListItemTemplate);
@@ -15,6 +22,9 @@ export function studentRender(data) {
         html.on("click", clickHandler);
         $("#students-container").append(html);
     });
+    if ($('#students-container').data('unsaved')) {
+        setSchoolWarningsHandler();
+    }
 }
 
 export function studentInfoRender(data) {

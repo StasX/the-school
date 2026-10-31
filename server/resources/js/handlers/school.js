@@ -4,6 +4,7 @@ import { courseHandlers } from "./course";
 import { studentHandlers } from "./student";
 
 export function resetSchoolHandlers() {
+    $('#students-container, #courses-container').data('unsaved', false);
     $("#add-student")
         .off("click", warningAddStudent)
         .off("click", studentHandlers.add)
@@ -25,6 +26,7 @@ export function resetSchoolHandlers() {
 }
 
 export function setSchoolWarningsHandler() {
+    $('#students-container, #courses-container').data('unsaved', true);
     $("#add-student")
         .off("click", studentHandlers.add)
         .off("click", warningAddStudent)
@@ -46,6 +48,7 @@ export function setSchoolWarningsHandler() {
 }
 
 export function removeSchoolWarningsHandler() {
+    $('#students-container, #courses-container').data('unsaved', false);
     $("#add-student")
         .off("click", warningAddStudent);
 

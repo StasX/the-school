@@ -1,9 +1,14 @@
-export function showAlert(message){
-$('#alerts').html(`<div class="alert alert-danger" role="alert">${message}</div>`);
+export function showAlert(message) {
+    const alert = $('<div class="alert alert-danger" role="alert"></div>');
+    const messages = Array.isArray(message) ? message : [message];
+    messages.forEach((text, index) => {
+        if (index > 0) alert.append('<br/>');
+        alert.append(document.createTextNode(text));
+    });
+    $('#alerts').empty().append(alert);
 }
 
 export function invalidFields(validator) {
-    const errors = validator.errorList.map(error => error.message).join('<br/>');
-showAlert(errors);
+    showAlert(validator.errorList.map(error => error.message));
 }
 

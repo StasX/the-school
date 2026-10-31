@@ -5,7 +5,7 @@ export function courseValidationConfig({
         rules: {
             name: {
                 required: true,
-                minlength: 8,
+                minlength: 2,
                 maxlength: 32,
             },
             description: {
@@ -31,14 +31,14 @@ export function courseValidationConfig({
             },
             description: {
                 required: "Description is required.",
-                minlength: "Description must contain at least 2 characters.",
+                minlength: "Description must contain at least 8 characters.",
                 maxlength: "Description too long",
             },
             image: {
                 required: "Image is required.",
                 extension: "Image have to be jpg, png, gif file.",
-                filesize: "Image must not exceed 500 KB.",
-                imagesize: "Image too large."
+                filesize: "Image must not exceed 1024 KB.",
+                imagesize: "Image dimensions must not exceed 350 x 350 pixels."
             }
         },
 

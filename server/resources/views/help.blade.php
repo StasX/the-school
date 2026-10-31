@@ -132,7 +132,7 @@
                         <b>Request:</b>
                         <pre>
                             <code>
-                                (empty)
+                                Query: page=1 (positive integer; optional)
                             </code>
                         </pre>
 
@@ -141,17 +141,20 @@
                         <b>Response:</b>
                         <pre>
                             <code>
-                                [
-                                    {
-                                        "id": integer,
-                                        "email": string,
-                                        "name": string,
-                                        "role": string,
-                                        "phone": string,
-                                        "image": string
-                                    },
-                                    ...
-                                ]
+                                {
+                                    "data": [
+                                        {
+                                                "id": integer,
+                                                "email": string,
+                                                "name": string,
+                                                "role": string,
+                                                "phone": string,
+                                                "image": string
+                                        }
+                                    ],
+                                    "links": { "first": string, "last": string, "prev": string|null, "next": string|null },
+                                    "meta": { "current_page": integer, "last_page": integer, "per_page": 20, "total": integer, ... }
+                                }
                             </code>
                         </pre>
                     </div>
@@ -315,7 +318,7 @@
                         <b>Request:</b>
                         <pre>
                             <code>
-                                (empty)
+                                Query: page=1 (positive integer; optional)
                             </code>
                         </pre>
                     </div>
@@ -323,25 +326,19 @@
                         <b>Response:</b>
                         <pre>
                             <code>
-                                [
-                                    {
-                                        "id": integer,
-                                        "email": string,
-                                        "name": string,
-                                        "phone": string,
-                                        "image": string,
-                                        "courses": [
-                                            {
+                                {
+                                    "data": [
+                                        {
                                                 "id": integer,
+                                                "email": string,
                                                 "name": string,
-                                                "description": string,
+                                                "phone": string,
                                                 "image": string
-                                            },
-                                            ...
-                                        ]
-                                    },
-                                    ...
-                                ]
+                                        }
+                                    ],
+                                    "links": { "first": string, "last": string, "prev": string|null, "next": string|null },
+                                    "meta": { "current_page": integer, "last_page": integer, "per_page": 20, "total": integer, ... }
+                                }
                             </code>
                         </pre>
                     </div>
@@ -508,7 +505,7 @@
                         <b>Request:</b>
                         <pre>
                             <code>
-                                (empty)
+                                Query: page=1 (positive integer; optional)
                             </code>
                         </pre>
                     </div>
@@ -516,15 +513,18 @@
                         <b>Response:</b>
                         <pre>
                             <code>
-                                [
-                                    {
-                                        "id": integer,
-                                        "name": string,
-                                        "description": string,
-                                        "image": string
-                                    },
-                                    ...
-                                ]
+                                {
+                                    "data": [
+                                        {
+                                                "id": integer,
+                                                "name": string,
+                                                "description": string,
+                                                "image": string
+                                        }
+                                    ],
+                                    "links": { "first": string, "last": string, "prev": string|null, "next": string|null },
+                                    "meta": { "current_page": integer, "last_page": integer, "per_page": 20, "total": integer, ... }
+                                }
                             </code>
                         </pre>
                     </div>

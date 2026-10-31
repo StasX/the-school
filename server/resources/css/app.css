@@ -4,8 +4,26 @@
 @import './login.css';
 @import './school.css';
 
+body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+body > .navbar {
+    flex-shrink: 0;
+}
+
 body>.container-fluid {
     margin-top: 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+body > .container-fluid > .row {
+    flex: 1;
 }
 
 pre>code {
