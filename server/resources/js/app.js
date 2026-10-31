@@ -4,7 +4,7 @@ import administration from './administration';
 import notFound from './notFound';
 import AuthApi from './api/authApi';
 import { loginValidationConfig } from './validations/login';
-import {showAlert} from './messages/invalidFields';
+import { invalidFields } from './messages/invalidFields';
 import AuthFailure from './messages/authFailure';
 
 
@@ -33,11 +33,11 @@ $(function () {
 
     if (!location.hash) {
         const form = $('#login');
-        form.validate(loginValidationConfig);
+        const validator = form.validate(loginValidationConfig);
         form.on('submit', function (e) {
             e.preventDefault();
             if (!form.valid()) {
-                showAlert('Too many requests. Please try again later.');;
+                invalidFields(validator);
                 return;
             }
             const data = {

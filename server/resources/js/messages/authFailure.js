@@ -1,4 +1,4 @@
-import { invalidCredentials, showAlert } from "./invalidFields";
+import { showAlert } from "./invalidFields";
 
 const AuthFailure = {
     login(xhr) {
@@ -8,6 +8,7 @@ const AuthFailure = {
                 break;
             case 429:
                 showAlert('Too many requests. Please try again later.');
+                break;
             default:
                 showAlert('An error occurred. Please try again later.');
         }
