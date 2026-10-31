@@ -3,64 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\StudentResource;
+use App\Http\Validation\CommonRules;
+use App\Http\Validation\StudentRules;
 use App\Models\Course;
 use App\Models\Student;
+use App\Services\ImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
-use RuntimeException;
 use Throwable;
 
 class StudentController extends Controller
 {
-    private function storeImage(UploadedFile $file): string
+    public function __construct(private readonly ImageStorage $images)
     {
-        $filename = uniqid() . '.' . $file->extension();
-
-        $path = Storage::disk('uploads')->putFileAs(
-            '',
-            $file,
-            $filename
-        );
-
-        if ($path === false) {
-            throw new RuntimeException('Failed to store image.');
-        }
-
-        return $filename;
     }
-
-    //------------------------------------------------------------------------
-
-    private function cleanupImage(?string $image): void
-    {
-        if (! $image) {
-            return;
-        }
-
-        try {
-            $disk = Storage::disk('uploads');
-            $filename = basename($image);
-
-            if ($disk->exists($filename) && ! $disk->delete($filename)) {
-                throw new RuntimeException('Failed to delete image.');
-            }
-        } catch (Throwable $exception) {
-            report($exception);
-        }
-    }
-
-    //------------------------------------------------------------------------
 
     public function getAll(Request $request): JsonResponse
     {
-        $request->validate([
-            'page' => ['sometimes', 'integer', 'min:1'],
-        ]);
+        $request->validate(CommonRules::pagination());
 
         return StudentResource::collection(
             Student::orderBy('Student_ID')->paginate(20)
@@ -95,49 +58,14 @@ class StudentController extends Controller
          *     courses?: array<int, int>
          * } $validated
          */
-        $validated = $request->validate([
-            'email' => [
-                'required',
-                'email',
-                'unique:students,Email',
-                'max:64',
-            ],
-            'name' => [
-                'required',
-                'string',
-                'max:32',
-                'min:2',
-            ],
-            'phone' => [
-                'required',
-                'string',
-                'max:16',
-                'regex:/^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/',
-            ],
-            'image' => [
-                'required',
-                'image',
-                'mimes:jpg,jpeg,png,gif',
-                'max:500',
-                'dimensions:max_width=250,max_height=250',
-            ],
-            'courses' => [
-                'sometimes',
-                'array',
-            ],
-            'courses.*' => [
-                'integer',
-                'distinct',
-                'exists:courses,Course_ID',
-            ],
-        ]);
+        $validated = $request->validate(StudentRules::create());
         $file = $request->file('image');
         if (! $file instanceof UploadedFile) {
             return response()->json([
                 'message' => 'Invalid image',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-        $filename = $this->storeImage($file);
+        $filename = $this->images->store($file);
         try {
             /** @var array<string, mixed> $data */
             $data = [
@@ -153,7 +81,7 @@ class StudentController extends Controller
                 return $student;
             });
         } catch (Throwable $exception) {
-            $this->cleanupImage("/upload/$filename");
+            $this->images->cleanup("/upload/$filename");
             throw $exception;
         }
         return (new StudentResource($student->load('courses')))
@@ -181,45 +109,7 @@ class StudentController extends Controller
          *     courses?: array<int, int>
          * } $validated
          */
-        $validated = $request->validate([
-            'email' => [
-                'required',
-                'email',
-                Rule::unique('students', 'Email')
-                    ->ignore($id, 'Student_ID'),
-                'max:64',
-                'min:7',
-            ],
-            'name' => [
-                'required',
-                'string',
-                'max:32',
-                'min:2',
-            ],
-            'phone' => [
-                'required',
-                'string',
-                'max:16',
-                'regex:/^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/',
-            ],
-            'image' => [
-                'sometimes',
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,gif',
-                'max:500',
-                'dimensions:max_width=250,max_height=250',
-            ],
-            'courses' => [
-                'sometimes',
-                'array',
-            ],
-            'courses.*' => [
-                'integer',
-                'distinct',
-                'exists:courses,Course_ID',
-            ],
-        ]);
+        $validated = $request->validate(StudentRules::update($id));
         /** @var array<string, mixed> $data */
         $data = [
             'Email' => $validated['email'],
@@ -241,7 +131,7 @@ class StudentController extends Controller
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
-            $filename = $this->storeImage($file);
+            $filename = $this->images->store($file);
 
             $newImage = "/upload/$filename";
             $data['Image'] = $newImage;
@@ -255,12 +145,12 @@ class StudentController extends Controller
                 }
             });
         } catch (Throwable $exception) {
-            $this->cleanupImage($newImage);
+            $this->images->cleanup($newImage);
             throw $exception;
         }
 
         if ($imageChanged) {
-            $this->cleanupImage($oldImage);
+            $this->images->cleanup($oldImage);
         }
 
         $student->refresh();
@@ -282,7 +172,7 @@ class StudentController extends Controller
             $student->courses()->detach();
             $student->delete();
         });
-        $this->cleanupImage($oldImage);
+        $this->images->cleanup($oldImage);
 
         return response('', Response::HTTP_NO_CONTENT);
     }

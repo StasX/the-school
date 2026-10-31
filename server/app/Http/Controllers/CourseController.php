@@ -3,61 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\CourseResource;
+use App\Http\Validation\CommonRules;
+use App\Http\Validation\CourseRules;
 use App\Models\Course;
+use App\Services\ImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 use Throwable;
 
 class CourseController extends Controller
 {
-    private function storeImage(UploadedFile $file): string
+    public function __construct(private readonly ImageStorage $images)
     {
-        $filename = uniqid() . '.' . $file->extension();
-
-        $path = Storage::disk('uploads')->putFileAs(
-            '',
-            $file,
-            $filename
-        );
-
-        if ($path === false) {
-            throw new RuntimeException('Failed to store image.');
-        }
-
-        return $filename;
     }
-
-    //------------------------------------------------------------------------
-
-    private function cleanupImage(?string $image): void
-    {
-        if (! $image) {
-            return;
-        }
-
-        try {
-            $disk = Storage::disk('uploads');
-            $filename = basename($image);
-
-            if ($disk->exists($filename) && ! $disk->delete($filename)) {
-                throw new RuntimeException('Failed to delete image.');
-            }
-        } catch (Throwable $exception) {
-            report($exception);
-        }
-    }
-
-    //------------------------------------------------------------------------
 
     public function getAll(Request $request): JsonResponse
     {
-        $request->validate([
-            'page' => ['sometimes', 'integer', 'min:1'],
-        ]);
+        $request->validate(CommonRules::pagination());
 
         return CourseResource::collection(
             Course::orderBy('Course_ID')->paginate(20)
@@ -90,24 +54,14 @@ class CourseController extends Controller
          *     image: UploadedFile
          * } $validated
          */
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:32', 'min:2'],
-            'description' => ['required', 'string', 'max:500', 'min:8'],
-            'image' => [
-                'required',
-                'image',
-                'mimes:jpg,jpeg,png,gif',
-                'max:1024',
-                'dimensions:max_width=350,max_height=350',
-            ],
-        ]);
+        $validated = $request->validate(CourseRules::create());
         $file = $request->file('image');
         if (! $file instanceof UploadedFile) {
             return response()->json([
                 'message' => 'Invalid image',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-        $filename = $this->storeImage($file);
+        $filename = $this->images->store($file);
         try {
             /** @var array<string, mixed> $data */
             $data = [
@@ -117,7 +71,7 @@ class CourseController extends Controller
             ];
             $course = Course::create($data);
         } catch (Throwable $exception) {
-            $this->cleanupImage("/upload/$filename");
+            $this->images->cleanup("/upload/$filename");
             throw $exception;
         }
         return (new CourseResource($course))
@@ -141,18 +95,7 @@ class CourseController extends Controller
          *     image?: UploadedFile|null
          * } $validated
          */
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:32', 'min:2'],
-            'description' => ['required', 'string', 'max:500', 'min:8'],
-            'image' => [
-                'sometimes',
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,gif',
-                'max:1024',
-                'dimensions:max_width=350,max_height=350',
-            ],
-        ]);
+        $validated = $request->validate(CourseRules::update($id));
         /** @var array<string, mixed> $data */
         $data = [
             'Name' => $validated['name'],
@@ -170,19 +113,19 @@ class CourseController extends Controller
                     'message' => 'Invalid image',
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
-            $filename = $this->storeImage($file);
+            $filename = $this->images->store($file);
             $newImage = "/upload/$filename";
             $data['Image'] = $newImage;
         }
         try {
             $course->update($data);
         } catch (Throwable $exception) {
-            $this->cleanupImage($newImage);
+            $this->images->cleanup($newImage);
             throw $exception;
         }
 
         if ($imageChanged) {
-            $this->cleanupImage($oldImage);
+            $this->images->cleanup($oldImage);
         }
         return (new CourseResource(
             $course->refresh()->load('students')
@@ -203,7 +146,7 @@ class CourseController extends Controller
         }
         $oldImage = $course->Image;
         $course->delete();
-        $this->cleanupImage($oldImage);
+        $this->images->cleanup($oldImage);
 
         return response('', Response::HTTP_NO_CONTENT);
     }

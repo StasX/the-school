@@ -3,64 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\AdministratorResource;
+use App\Http\Validation\AdministratorRules;
+use App\Http\Validation\CommonRules;
 use App\Models\Administrator;
+use App\Services\ImageStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
-use RuntimeException;
 use Throwable;
 
 class AdministratorController extends Controller
 {
-    private function storeImage(UploadedFile $file): string
+    public function __construct(private readonly ImageStorage $images)
     {
-        $filename = uniqid() . '.' . $file->extension();
-
-        $path = Storage::disk('uploads')->putFileAs(
-            '',
-            $file,
-            $filename
-        );
-
-        if ($path === false) {
-            throw new RuntimeException('Failed to store image.');
-        }
-
-        return $filename;
     }
-
-    //------------------------------------------------------------------------
-
-    private function cleanupImage(?string $image): void
-    {
-        if (! $image) {
-            return;
-        }
-
-        try {
-            $disk = Storage::disk('uploads');
-            $filename = basename($image);
-
-            if ($disk->exists($filename) && ! $disk->delete($filename)) {
-                throw new RuntimeException('Failed to delete image.');
-            }
-        } catch (Throwable $exception) {
-            report($exception);
-        }
-    }
-
-    //------------------------------------------------------------------------
 
     public function getAll(Request $request): JsonResponse
     {
-        $request->validate([
-            'page' => ['sometimes', 'integer', 'min:1'],
-        ]);
+        $request->validate(CommonRules::pagination());
 
         /** @var Administrator $admin */
         $admin = Auth::user();
@@ -105,51 +68,14 @@ class AdministratorController extends Controller
          *     image: UploadedFile
          * } $validated
          */
-        $validated = $request->validate([
-            'email' => [
-                'required',
-                'email',
-                'unique:administrators,Email',
-                'max:64',
-                'min:7',
-            ],
-            'name' => [
-                'required',
-                'string',
-                'max:32',
-                'min:2',
-            ],
-            'role' => [
-                'required',
-                Rule::in(['manager', 'sales']),
-            ],
-            'phone' => [
-                'required',
-                'string',
-                'max:16',
-                'regex:/^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/',
-            ],
-            'password' => [
-                'required',
-                'string',
-                'min:8',
-                'max:32',
-            ],
-            'image' => [
-                'required',
-                'image',
-                'mimes:jpg,jpeg,png,gif',
-                'max:500',
-                'dimensions:max_width=250,max_height=250',
-            ],
-        ]);
+        $validated = $request->validate(AdministratorRules::create());
         $file = $request->file('image');
         if (! $file instanceof UploadedFile) {
             return response()->json([
                 'error' => 'Invalid image',
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-        $filename = $this->storeImage($file);
+        $filename = $this->images->store($file);
 
         try {
             /** @var array<string, mixed> $data */
@@ -163,7 +89,7 @@ class AdministratorController extends Controller
             ];
             $administrator = Administrator::create($data);
         } catch (Throwable $exception) {
-            $this->cleanupImage("/upload/$filename");
+            $this->images->cleanup("/upload/$filename");
             throw $exception;
         }
 
@@ -200,46 +126,7 @@ class AdministratorController extends Controller
          *     image?: UploadedFile|null
          * } $validated
          */
-        $validated = $request->validate([
-            'email' => [
-                'required',
-                'email',
-                'max:64',
-                Rule::unique('administrators', 'Email')
-                    ->ignore($id, 'Administrator_ID'),
-            ],
-            'name' => [
-                'required',
-                'string',
-                'max:32',
-                'min:2',
-            ],
-            'role' => [
-                'sometimes',
-                Rule::in(['manager', 'owner', 'sales']),
-            ],
-            'phone' => [
-                'required',
-                'string',
-                'max:16',
-                'regex:/^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/',
-            ],
-            'image' => [
-                'sometimes',
-                'nullable',
-                'image',
-                'mimes:jpg,jpeg,png,gif',
-                'max:500',
-                'dimensions:max_width=250,max_height=250',
-            ],
-            'password' => [
-                'sometimes',
-                'nullable',
-                'string',
-                'min:8',
-                'max:32',
-            ],
-        ]);
+        $validated = $request->validate(AdministratorRules::update($id));
         /** @var array<string, mixed> $data */
         $data = [
             'Email' => $validated['email'],
@@ -275,7 +162,7 @@ class AdministratorController extends Controller
                 ], Response::HTTP_UNPROCESSABLE_ENTITY);
             }
 
-            $filename = $this->storeImage($file);
+            $filename = $this->images->store($file);
             $newImage = "/upload/$filename";
 
             $data['Image'] = $newImage;
@@ -284,12 +171,12 @@ class AdministratorController extends Controller
         try {
             $administrator->update($data);
         } catch (Throwable $exception) {
-            $this->cleanupImage($newImage);
+            $this->images->cleanup($newImage);
             throw $exception;
         }
 
         if ($imageChanged) {
-            Storage::disk('uploads')->delete(basename($oldImage));
+            $this->images->cleanup($oldImage);
         }
         return (new AdministratorResource($administrator))->response();
     }
@@ -312,9 +199,7 @@ class AdministratorController extends Controller
         $oldImage = $administrator->Image;
         $administrator->delete();
 
-        if ($oldImage && Storage::disk('uploads')->exists(basename($oldImage))) {
-            Storage::disk('uploads')->delete(basename($oldImage));
-        }
+        $this->images->cleanup($oldImage);
         return response('', Response::HTTP_NO_CONTENT);
     }
 
