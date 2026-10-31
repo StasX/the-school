@@ -1,6 +1,8 @@
 describe('Authentication', () => {
     beforeEach(() => {
         cy.visit('/');
+        // jQuery Validation sets this when the login form is initialized.
+        cy.get('#login').should('have.attr', 'novalidate');
     });
 
     it('displays the login form', () => {
