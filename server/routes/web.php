@@ -42,27 +42,27 @@ Route::prefix('api')->group(function () {
 
         Route::middleware('role:owner,manager,sales')->group(function () {
             Route::get('/student', [StudentController::class, 'getAll']);
-            Route::get('/student/{id}', [StudentController::class, 'getById']);
+            Route::get('/student/{id}', [StudentController::class, 'getById'])->whereNumber('id');
             Route::post('/student', [StudentController::class, 'add']);
-            Route::put('/student/{id}', [StudentController::class, 'update']);
-            Route::delete('/student/{id}', [StudentController::class, 'remove']);
-            Route::delete('/student/{studentId}/course/{courseId}', [StudentController::class, 'unsubscribe']);
+            Route::put('/student/{id}', [StudentController::class, 'update'])->whereNumber('id');
+            Route::delete('/student/{id}', [StudentController::class, 'remove'])->whereNumber('id');
+            Route::delete('/student/{studentId}/course/{courseId}', [StudentController::class, 'unsubscribe'])->whereNumber(['studentId', 'courseId']);
 
             Route::get('/course', [CourseController::class, 'getAll']);
-            Route::get('/course/{id}', [CourseController::class, 'getById']);
+            Route::get('/course/{id}', [CourseController::class, 'getById'])->whereNumber('id');
         });
 
         Route::middleware('role:owner,manager')->group(function () {
             Route::post('/course', [CourseController::class, 'add']);
-            Route::put('/course/{id}', [CourseController::class, 'update']);
-            Route::delete('/course/{id}', [CourseController::class, 'remove']);
+            Route::put('/course/{id}', [CourseController::class, 'update'])->whereNumber('id');
+            Route::delete('/course/{id}', [CourseController::class, 'remove'])->whereNumber('id');
 
             Route::get('/administrator', [AdministratorController::class, 'getAll']);
             Route::get('/administrator/count', [AdministratorController::class, 'getTotalCount']);
             Route::get('/administrator/{id}', [AdministratorController::class, 'getById'])->whereNumber('id');
             Route::post('/administrator', [AdministratorController::class, 'add']);
-            Route::put('/administrator/{id}', [AdministratorController::class, 'update']);
-            Route::delete('/administrator/{id}', [AdministratorController::class, 'remove']);
+            Route::put('/administrator/{id}', [AdministratorController::class, 'update'])->whereNumber('id');
+            Route::delete('/administrator/{id}', [AdministratorController::class, 'remove'])->whereNumber('id');
         });
     });
 });
