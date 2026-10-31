@@ -7,10 +7,13 @@ import { loginValidationConfig } from './validations/login';
 import { showAlert } from './messages/invalidFields';
 import { invalidCredentialsMessage } from './messages/loginFailure';
 import AuthFailure from './messages/authFailure';
+import { showWarning } from './messages/warnings';
 
 
 $(function () {
     let user = null;
+    let renderedHash = location.hash;
+    let navigationPending = false;
 
     function render(data) {
         if (!data) {
@@ -18,6 +21,7 @@ $(function () {
         }
 
         user = data;
+        renderedHash = location.hash;
         switch (location.hash) {
             case '#!school':
                 school(user);
@@ -34,7 +38,29 @@ $(function () {
         }
     }
 
-    $(window).on('hashchange', () => render(user));
+    $(window).on('hashchange', () => {
+        const targetHash = location.hash;
+        const hasUnsavedChanges = $('#students-container, #courses-container, #administrators-container')
+            .toArray().some(element => $(element).data('unsaved'));
+
+        if (navigationPending || hasUnsavedChanges) {
+            // Restore the current route without triggering another hashchange.
+            history.replaceState(null, '', location.pathname + location.search + renderedHash);
+            if (navigationPending || targetHash === renderedHash) return;
+
+            navigationPending = true;
+            showWarning('navigate away').then(result => {
+                navigationPending = false;
+                if (result.isConfirmed) {
+                    history.replaceState(null, '', location.pathname + location.search + targetHash);
+                    render(user);
+                }
+            });
+            return;
+        }
+
+        render(user);
+    });
 
     if (!location.hash) {
         const form = $('#login');
