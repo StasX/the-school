@@ -13,7 +13,12 @@ class CommonRules
     /** @return list<string> */
     public static function phone(): array
     {
-        return ['required', 'string', 'max:16', 'regex:/^\+?[0-9](?:[0-9\s\-().]*[0-9])?$/'];
+        return [
+            'required',
+            'string',
+            'max:16',
+            'regex:/^(?=(?:[^0-9]*[0-9]){7})\+?[0-9](?:[0-9\s\-().]*[0-9])?$/',
+        ];
     }
 
     /** @return list<string> */
