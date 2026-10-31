@@ -17,7 +17,6 @@ on:
       - main
     paths-ignore:
       - README.md
-      - .github/workflows/main.yaml
       - .github/workflows/docker.yaml
 
 jobs:
@@ -129,7 +128,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: mbstring, pdo_sqlite, sqlite3, fileinfo
+          extensions: mbstring, pdo_mysql, fileinfo
           coverage: none
 
       - name: Get Composer cache directory
@@ -289,112 +288,73 @@ jobs:
           path: server/storage/php-cs-fixer/php-cs-fixer.txt
           if-no-files-found: warn
 
-  phpunit:
-    name: PHPUnit
+  phpunit-mariadb:
+    name: PHPUnit - MariaDB (production schema)
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: server
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          extensions: mbstring, pdo_sqlite, sqlite3, fileinfo
-          coverage: none
+      - name: Run PHPUnit with the MariaDB test stack
+        run: >-
+          docker compose -f docker-compose.test.yml up --build
+          --abort-on-container-exit --exit-code-from tests
 
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('server/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Prepare environment
+      - name: Collect PHPUnit report and Docker logs
+        if: always()
+        continue-on-error: true
         run: |
-          cp ../.env.example .env
-          php artisan key:generate
+          mkdir -p test-results
+          docker compose -f docker-compose.test.yml logs --no-color > test-results/docker.log 2>&1
+          docker compose -f docker-compose.test.yml cp tests:/var/www/html/storage/logs/phpunit.xml test-results/phpunit.xml
 
-      - name: Run PHPUnit
-        run: php artisan test --log-junit storage/logs/phpunit.xml
-
-      - name: Upload PHPUnit report
+      - name: Upload MariaDB test results
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: phpunit-results
-          path: server/storage/logs/phpunit.xml
+          name: phpunit-mariadb-results
+          path: test-results/
           if-no-files-found: warn
 
-  infection:
-    name: Infection
-    runs-on: ubuntu-latest
+      - name: Stop the MariaDB test stack
+        if: always()
+        run: docker compose -f docker-compose.test.yml --profile mutation down -v --remove-orphans
 
-    defaults:
-      run:
-        working-directory: server
+  infection:
+    name: Infection - MariaDB
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          extensions: mbstring, pdo_sqlite, sqlite3, fileinfo
-          coverage: pcov
+      - name: Run Infection with the MariaDB test stack
+        run: >-
+          docker compose -f docker-compose.test.yml up --build
+          --abort-on-container-exit --exit-code-from infection infection
 
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v5
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('server/composer.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Prepare environment
+      - name: Collect Infection reports and Docker logs
+        if: always()
+        continue-on-error: true
         run: |
-          cp ../.env.example .env
-          php artisan key:generate
-          mkdir -p storage/infection
+          mkdir -p infection-results
+          docker compose -f docker-compose.test.yml logs --no-color > infection-results/docker.log 2>&1
+          docker compose -f docker-compose.test.yml cp infection:/var/www/html/storage/infection/. infection-results/
 
-      - name: Run Infection
-        run: |
-          vendor/bin/infection \
-            --threads=4 \
-            --no-progress \
-            --min-msi=80
-
-      - name: Upload Infection report
+      - name: Upload Infection results
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: infection-results
-          path: |
-            server/storage/infection/infection.log
-            server/storage/infection/infection.json
+          path: infection-results/
           if-no-files-found: warn
+
+      - name: Stop the MariaDB test stack
+        if: always()
+        run: docker compose -f docker-compose.test.yml --profile mutation down -v --remove-orphans
 
   frontend:
     name: Frontend Build
@@ -426,7 +386,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - checkov
-      - phpunit
+      - phpunit-mariadb
       - phpstan
       - phpcs
       - php-cs-fixer

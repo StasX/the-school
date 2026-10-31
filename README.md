@@ -80,6 +80,7 @@ GitHub Actions runs automated testing and quality checks on application changes.
 The pipeline includes:
 
 - PHPUnit feature tests
+- PHPUnit integration tests against the production MariaDB schema using `docker-compose.test.yml`
 - Cypress end-to-end tests
 - frontend build validation
 - PHPStan static analysis
@@ -98,10 +99,10 @@ Current result:
 
 ```text
 Mutation Code Coverage: 100%
-Mutation Score Indicator (MSI): 80.15%
-Killed mutants: 214
-Escaped mutants: 53
-Total mutants: 267
+Mutation Score Indicator (MSI): 80.86%
+Killed mutants: 207
+Escaped mutants: 49
+Total mutants: 256
 ```
 
 Mutation testing helped identify tests that executed code without sufficiently verifying its behavior.
@@ -125,7 +126,7 @@ TheSchool/
 │   │   └── cache/
 │   ├── config/
 │   ├── database/
-│   │   └── migrations/
+│   │   └── seeders/
 │   ├── public/
 │   │   └── img/
 │   ├── resources/
@@ -253,8 +254,8 @@ docker compose down
 
 ## Development with Docker
 
-The development stack includes PHP development dependencies, SQLite and GD for
-PHPUnit, PCOV for mutation testing, and a Vite server with live reload. Source
+The development stack includes PHP development dependencies, GD for image
+validation, PCOV for mutation testing, and a Vite server with live reload. Source
 changes are shared with the containers. Dependencies and application data use
 Docker volumes, separate from the production stack and host dependencies.
 
@@ -265,7 +266,7 @@ docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 Open `http://localhost:8090`. The first start installs Composer and npm
-dependencies, initializes the sample database, and runs migrations. No root
+dependencies and initializes the sample database from `sql/theschool.sql`. No root
 `.env` file is required: the app loads `docker/dev.env` with development
 overrides. Its sample credentials and application key are for local development.
 The owner login is `joe@mail.com` / `abc123!!`.
@@ -277,16 +278,14 @@ when running Docker Desktop on Windows.
 Run checks inside the development container:
 
 ```bash
-docker compose -f docker-compose.dev.yml exec app php artisan test
 docker compose -f docker-compose.dev.yml exec app vendor/bin/phpstan analyse
 docker compose -f docker-compose.dev.yml exec app vendor/bin/phpcs
 docker compose -f docker-compose.dev.yml exec app vendor/bin/php-cs-fixer fix --dry-run --diff
-docker compose -f docker-compose.dev.yml exec app vendor/bin/infection --threads=4 --no-progress --min-msi=80
 ```
 
-PHPUnit uses an in-memory SQLite database rather than the development MariaDB
-data. After changing dependency lockfiles, restart the affected service to
-install the updated dependencies:
+Run PHPUnit and Infection with the isolated test stack described below.
+After changing dependency lockfiles, restart the affected development service
+to install the updated dependencies:
 
 ```bash
 docker compose -f docker-compose.dev.yml restart app vite
@@ -304,10 +303,45 @@ generated `server/public/hot` file if it remains after shutdown.
 
 ## Running Tests
 
+### Isolated MariaDB tests
+
+Run PHPUnit against the same MariaDB image and SQL initialization used by
+production, without starting or changing the development or production stacks:
+
+```bash
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
+docker compose -f docker-compose.test.yml down
+```
+
+The test stack publishes no ports and uses an isolated `school_test` database
+stored in memory. It imports `sql/theschool.sql` and removes sample rows before
+running tests. Each test's fixtures are rolled back in a transaction. Production,
+development, and tests all use the SQL script as the schema source; Laravel
+migrations are not used. Queues run synchronously by default, so no Laravel jobs
+tables are required.
+
+GitHub Actions runs this stack in the `PHPUnit - MariaDB (production schema)` job,
+uploads its JUnit report and Docker logs, and requires it to pass before Cypress
+runs. Infection also runs against MariaDB in a separate CI job. The old SQLite
+PHPUnit job has been removed.
+
+Dependency and writable application directories use separate test volumes, and
+the source mount is read-only. Stop the stack after each run; `down -v` also
+removes cached test dependencies and application files. Run PHPUnit and Infection
+separately: both services use the same isolated database. Future SQL schema
+changes require an explicit upgrade script for existing databases; the init
+script runs only when MariaDB initializes a fresh data directory.
+
+To rerun selected tests while the database container is running:
+
+```bash
+docker compose -f docker-compose.test.yml run --rm tests --filter=AuthenticationTest
+```
+
 ### PHPUnit
 
 ```bash
-docker compose exec app php artisan test
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
 ```
 
 ### PHPStan
@@ -331,11 +365,13 @@ docker compose exec app vendor/bin/php-cs-fixer fix --dry-run --diff
 ### Infection
 
 ```bash
-docker compose exec app vendor/bin/infection \
-    --threads=4 \
-    --no-progress \
-    --min-msi=80
+docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from infection infection
+docker compose -f docker-compose.test.yml --profile mutation down
 ```
+
+Infection uses PCOV and one worker, so mutation processes do not overlap their
+database transactions. The minimum MSI remains 80%. CI uploads the mutation
+reports and Docker logs as `infection-results`.
 
 ### Cypress
 
