@@ -1,5 +1,6 @@
-import { invalidFields } from "./invalidFields";
+import { showAlert } from "./invalidFields";
 import failure from "./failure";
+import AuthFailure from "./authFailure";
 import noPermissions from "./noPermissions";
 
 export function courseNotFoundAlert() {
@@ -42,7 +43,7 @@ export const CourseFailure = {
                 noPermissions();
                 break;
             case 422:
-                invalidFields([xhr.responseJSON.message]);
+                showAlert(xhr.responseJSON?.message ?? "Please check the entered fields and try again.");
                 break;
             default:
                 failure();
@@ -62,7 +63,7 @@ export const CourseFailure = {
                 courseNotFoundAlert();
                 break;
             case 422:
-                invalidFields([xhr.responseJSON.message]);
+                showAlert(xhr.responseJSON?.message ?? "Please check the entered fields and try again.");
                 break;
             default:
                 failure();

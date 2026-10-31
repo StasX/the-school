@@ -1,4 +1,4 @@
-import { invalidFields } from "./invalidFields";
+import { showAlert } from "./invalidFields";
 import failure from "./failure";
 import AuthFailure from "./authFailure";
 import noPermissions from "./noPermissions";
@@ -44,7 +44,7 @@ const StudentFailure = {
                 noPermissions();
                 break;
             case 422:
-                invalidFields([xhr.responseJSON.message]);
+                showAlert(xhr.responseJSON?.message ?? "Please check the entered fields and try again.");
                 break;
             default:
                 failure();
@@ -64,7 +64,7 @@ const StudentFailure = {
                 studentNotFoundAlert();
                 break;
             case 422:
-                invalidFields([xhr.responseJSON.message]);
+                showAlert(xhr.responseJSON?.message ?? "Please check the entered fields and try again.");
                 break;
             default:
                 failure();
