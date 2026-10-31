@@ -383,20 +383,24 @@ docker compose -f docker-compose.test.yml up --build --abort-on-container-exit -
 
 ### PHPStan
 
+Start the [development environment](#development-with-docker) before running
+PHPStan, PHP_CodeSniffer, or PHP-CS-Fixer. These tools require development
+dependencies, which are not installed in the production image.
+
 ```bash
-docker compose exec app vendor/bin/phpstan analyse
+docker compose -f docker-compose.dev.yml exec app vendor/bin/phpstan analyse
 ```
 
 ### PHP_CodeSniffer
 
 ```bash
-docker compose exec app vendor/bin/phpcs
+docker compose -f docker-compose.dev.yml exec app vendor/bin/phpcs
 ```
 
 ### PHP-CS-Fixer
 
 ```bash
-docker compose exec app vendor/bin/php-cs-fixer fix --dry-run --diff
+docker compose -f docker-compose.dev.yml exec app vendor/bin/php-cs-fixer fix --dry-run --diff
 ```
 
 ### Infection
