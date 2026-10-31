@@ -309,6 +309,7 @@ Run PHPUnit against the same MariaDB image and SQL initialization used by
 production, without starting or changing the development or production stacks:
 
 ```bash
+mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
 docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
 docker compose -f docker-compose.test.yml down
 ```
@@ -365,6 +366,7 @@ docker compose exec app vendor/bin/php-cs-fixer fix --dry-run --diff
 ### Infection
 
 ```bash
+mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
 docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from infection infection
 docker compose -f docker-compose.test.yml --profile mutation down
 ```

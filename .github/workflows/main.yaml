@@ -297,6 +297,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Prepare test volume mount points
+        run: mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
+
       - name: Run PHPUnit with the MariaDB test stack
         run: >-
           docker compose -f docker-compose.test.yml up --build
@@ -330,6 +333,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Prepare test volume mount points
+        run: mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
 
       - name: Run Infection with the MariaDB test stack
         run: >-
