@@ -61,6 +61,32 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($administrator);
     }
 
+    public function test_administrator_can_login_after_updating_to_a_short_valid_email(): void
+    {
+        $administrator = $this->createAdministrator();
+
+        $this->actingAs($administrator)
+            ->putJson("/api/administrator/{$administrator->Administrator_ID}", [
+                'email' => 'a@b.co',
+                'name' => $administrator->Name,
+                'phone' => $administrator->Phone,
+            ])
+            ->assertOk()
+            ->assertJsonPath('email', 'a@b.co');
+
+        $this->postJson('/api/logout')->assertOk();
+        $this->assertGuest();
+
+        $this->postJson('/api/login', [
+            'email' => 'a@b.co',
+            'password' => 'password123',
+        ])
+            ->assertOk()
+            ->assertJsonPath('administrator.id', $administrator->Administrator_ID);
+
+        $this->assertAuthenticatedAs($administrator);
+    }
+
     public function test_login_fails_with_incorrect_password(): void
     {
         $this->createAdministrator();
@@ -71,7 +97,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
 
         $this->assertGuest();
@@ -85,7 +111,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
 
         $this->assertGuest();
@@ -96,7 +122,7 @@ class AuthenticationTest extends TestCase
         $this->postJson('/api/login', [])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
 
         $this->assertGuest();
@@ -159,7 +185,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
         $this->assertGuest();
     }
@@ -172,7 +198,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
         $this->assertGuest();
     }
@@ -184,7 +210,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
         $this->assertGuest();
     }
@@ -211,7 +237,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
         $this->assertGuest();
     }
@@ -224,7 +250,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
         $this->assertGuest();
     }
@@ -237,7 +263,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
         $this->assertGuest();
     }
@@ -277,7 +303,7 @@ class AuthenticationTest extends TestCase
         ])
             ->assertUnauthorized()
             ->assertJson([
-                'message' => 'Invalid username or password.',
+                'message' => 'invalid Username or Password',
             ]);
 
         $this->assertGuest();

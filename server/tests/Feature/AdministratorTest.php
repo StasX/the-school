@@ -34,6 +34,25 @@ class AdministratorTest extends TestCase
         ], $attributes));
     }
 
+    public function test_owner_can_create_administrator_with_a_short_valid_email(): void
+    {
+        $owner = $this->createAdministrator(['Role' => 'owner']);
+
+        $this->actingAs($owner)
+            ->postJson('/api/administrator', [
+                'email' => 'a@b.co',
+                'name' => 'Short Email',
+                'role' => 'sales',
+                'phone' => '0500000000',
+                'password' => 'password123',
+                'image' => UploadedFile::fake()->image('administrator.png', 100, 100),
+            ])
+            ->assertCreated()
+            ->assertJsonPath('email', 'a@b.co');
+
+        $this->assertDatabaseHas('administrators', ['Email' => 'a@b.co']);
+    }
+
     public function test_owner_can_list_administrators(): void
     {
         $owner = $this->createAdministrator([

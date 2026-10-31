@@ -4,7 +4,8 @@ import administration from './administration';
 import notFound from './notFound';
 import AuthApi from './api/authApi';
 import { loginValidationConfig } from './validations/login';
-import { invalidFields } from './messages/invalidFields';
+import { showAlert } from './messages/invalidFields';
+import { invalidCredentialsMessage } from './messages/loginFailure';
 import AuthFailure from './messages/authFailure';
 
 
@@ -37,11 +38,11 @@ $(function () {
 
     if (!location.hash) {
         const form = $('#login');
-        const validator = form.validate(loginValidationConfig);
+        form.validate(loginValidationConfig);
         form.on('submit', function (e) {
             e.preventDefault();
             if (!form.valid()) {
-                invalidFields(validator);
+                showAlert(invalidCredentialsMessage);
                 return;
             }
             const data = {
