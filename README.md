@@ -255,7 +255,22 @@ The PHP application targets PHP 8.5 or later.
 
 ### Start the environment
 
-From the project root:
+Before the first start, copy the root environment template to `.env` (keep an
+existing `.env` if you already configured one):
+
+```bash
+cp .env.example .env
+```
+
+In PowerShell, use `Copy-Item .env.example .env` instead.
+
+Docker Compose reads this root `.env` to configure the application and database
+containers. The supplied values support a local demo at `http://localhost:8090`.
+For a deployment, set a unique `APP_KEY` (a `base64:` prefix followed by 32 random
+bytes encoded as Base64), replace `DB_PASSWORD` and `DB_ROOT_PASSWORD`, and set
+`APP_URL` to your application URL. Keep `APP_DEBUG=false` and do not commit `.env`.
+
+Then start the environment from the project root:
 
 ```bash
 docker compose up -d --build
