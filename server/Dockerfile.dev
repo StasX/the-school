@@ -3,9 +3,9 @@ FROM php:8.5.12-apache
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git unzip curl libzip-dev libpng-dev libjpeg62-turbo-dev \
-        libfreetype6-dev libonig-dev libxml2-dev \
+        libfreetype6-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql mbstring gd zip dom xml xmlwriter \
+    && docker-php-ext-install pdo_mysql gd zip \
     && pecl install redis pcov \
     && docker-php-ext-enable redis pcov \
     && a2enmod rewrite \

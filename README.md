@@ -41,8 +41,8 @@ Additional restrictions protect the `owner` role:
 
 ### Backend
 
-- PHP 8.3
-- Laravel 12
+- PHP 8.5
+- Laravel 13
 - MariaDB
 - Redis
 
@@ -230,7 +230,7 @@ You need:
 - Docker
 - Docker Compose
 
-The PHP application targets PHP 8.3 or later.
+The PHP application targets PHP 8.5 or later.
 
 ### Start the environment
 
