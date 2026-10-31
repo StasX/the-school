@@ -45,7 +45,7 @@
                         </div>
                     </div>
                     <div class="row">
-                        <button type="submit" class="btn btn-secondary">Login</button>
+                        <button type="submit" class="btn btn-light">Login</button>
                     </div>
                 </form>
             </div>
