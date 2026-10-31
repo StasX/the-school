@@ -41,7 +41,6 @@ class StudentRules
                 Rule::unique('students', 'Email')
                     ->ignore($id, 'Student_ID'),
                 'max:64',
-                'min:7',
             ],
             'name' => CommonRules::name(),
             'phone' => CommonRules::phone(),

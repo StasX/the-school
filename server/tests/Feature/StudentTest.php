@@ -245,6 +245,34 @@ class StudentTest extends TestCase
         ];
     }
 
+    public function test_student_with_short_valid_email_can_be_created_and_updated(): void
+    {
+        $response = $this->post('/api/student', [
+            'email' => 'a@b.co',
+            'name' => 'Test Student',
+            'phone' => '0501234567',
+            'image' => UploadedFile::fake()->image('student.jpg', 100, 100),
+        ]);
+
+        $response->assertCreated();
+        $id = $response->json('id');
+
+        $this->putJson("/api/student/$id", [
+            'email' => 'a@b.co',
+            'name' => 'Updated Student',
+            'phone' => '0501234567',
+        ])
+            ->assertOk()
+            ->assertJsonPath('email', 'a@b.co')
+            ->assertJsonPath('name', 'Updated Student');
+
+        $this->assertDatabaseHas('students', [
+            'Student_ID' => $id,
+            'Email' => 'a@b.co',
+            'Name' => 'Updated Student',
+        ]);
+    }
+
     public function test_student_can_be_created_with_courses(): void
     {
         $courses = collect([
