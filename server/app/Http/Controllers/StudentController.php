@@ -106,7 +106,7 @@ class StudentController extends Controller
          *     name: string,
          *     phone: string,
          *     image?: UploadedFile|null,
-         *     courses?: array<int, int>
+         *     courses?: array<int, int>|null
          * } $validated
          */
         $validated = $request->validate(StudentRules::update($id));
