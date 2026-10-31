@@ -13,10 +13,10 @@ import { invalidFields } from "../messages/invalidFields";
 import StudentFailure from "../messages/studentFailure";
 
 function isStudentFormChanged(student) {
-    const currentCourses = (student?.courses || []).map(obj => obj.id);
+    const currentCourses = (student?.courses || []).map(obj => String(obj.id));
     const selectedCourses = [];
-    $('input[name="course[]"]:checked').each(function () {
-        selectedCourses.push($(this).val());
+    $('#students-form input[name="courses[]"]:checked').each(function () {
+        selectedCourses.push(String($(this).val()));
     });
     return (
         (student?.name ?? "") !== $("#name").val() ||
