@@ -32,7 +32,7 @@ RUN composer dump-autoload \
     --classmap-authoritative
 
 
-FROM php:8.3-apache
+FROM php:8.5.12-apache
 
 RUN pecl install redis \
     && docker-php-ext-enable redis \
