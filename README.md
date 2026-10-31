@@ -177,6 +177,19 @@ values return HTTP 422. Student and course lists omit relationships; retrieve an
 individual record to load its courses or students. The management screens provide
 Previous/Next controls, and enrollment forms load course choices across all pages.
 
+Student, course, and administrator ID route parameters accept digits only.
+This also applies to both IDs in
+`DELETE /api/student/{studentId}/course/{courseId}`. Nonnumeric IDs return
+HTTP 404 before reaching the controller.
+
+### Image storage
+
+Uploaded images use compact filenames generated with PHP's `uniqid()` plus the
+detected extension. The database stores the relative `/upload/{filename}` path
+in `Image` columns limited to 32 characters. Standard UUID filenames would
+exceed this limit once the prefix and extension are included; adopting them
+requires widening these columns in existing databases as well as the SQL schema.
+
 ### Authentication
 
 | Method | Endpoint | Description | Access |
