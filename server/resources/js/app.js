@@ -12,6 +12,10 @@ $(function () {
     let user = null;
 
     function render(data) {
+        if (!data) {
+            return;
+        }
+
         user = data;
         switch (location.hash) {
             case '#!school':
@@ -51,7 +55,11 @@ $(function () {
                         'X-CSRF-TOKEN': data.token
                     }
                 });
-                location.hash = '#!school';
+                if (location.hash === '#!school') {
+                    render(user);
+                } else {
+                    location.hash = '#!school';
+                }
             }).fail(AuthFailure.login);
         });
     } else {
