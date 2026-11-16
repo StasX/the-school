@@ -42,6 +42,12 @@ services:
       QUEUE_CONNECTION: ${QUEUE_CONNECTION}
       BROADCAST_CONNECTION: ${BROADCAST_CONNECTION}
       FILESYSTEM_DISK: ${FILESYSTEM_DISK}
+      UPLOADS_DRIVER: ${UPLOADS_DRIVER}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET}
+      MINIO_REGION: ${MINIO_REGION}
 
       LOGIN_RATE_LIMIT: ${LOGIN_RATE_LIMIT}
 
@@ -49,6 +55,8 @@ services:
       mariadb:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
     networks:
@@ -83,7 +91,33 @@ services:
       - app-network
 
 
+  # Build-only source for MinIO; no container is started.
+  backend-builder:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: backend-builder
+    deploy:
+      replicas: 0
+
+  minio:
+    build:
+      context: .
+      dockerfile: minio/Dockerfile
+      additional_contexts:
+        backend-builder: service:backend-builder
+      args:
+        MINIO_BUCKET: ${MINIO_BUCKET}
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    volumes:
+      - minio-data:/data
+    networks:
+      - app-network
+
 volumes:
+  minio-data:
   mariadb-data:
   redis-data:
   uploads:

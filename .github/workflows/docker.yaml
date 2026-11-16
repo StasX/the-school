@@ -76,6 +76,11 @@ jobs:
             dockerfile: ./sql/Dockerfile
             image: theschool-sql
 
+          - name: minio
+            context: .
+            dockerfile: ./minio/Dockerfile
+            image: theschool-minio
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -100,11 +105,22 @@ jobs:
             type=sha
             type=raw,value=latest
 
+      - name: Build backend source for MinIO
+        if: matrix.name == 'minio'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          target: backend-builder
+          push: false
+          outputs: type=local,dest=${{ runner.temp }}/backend-builder
+
       - name: Build image for scanning
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
+          build-contexts: ${{ matrix.name == 'minio' && format('backend-builder={0}/backend-builder', runner.temp) || '' }}
           load: true
           push: false
           tags: local-${{ matrix.name }}:${{ github.sha }}

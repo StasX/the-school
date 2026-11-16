@@ -15,11 +15,10 @@ Route::get('/', function () {
 
 Route::get('/upload/{filename}', function (string $filename) {
     $disk         = Storage::disk('uploads');
-    $filePath     = $disk->path($filename);
-    $notFoundPath = $disk->path('NotFound.png');
+    $path = $disk->exists($filename) ? $filename : 'NotFound.png';
+    abort_unless($disk->exists($path), Response::HTTP_NOT_FOUND);
 
-    $path = ($disk->exists($filename)) ? $filePath : $notFoundPath;
-    return response()->file($path, ['Cache-Control' => 'no-store'])->setPrivate();
+    return $disk->response($path, null, ['Cache-Control' => 'private, no-store']);
 })->middleware('auth');
 
 Route::prefix('api')->group(function () {

@@ -17,6 +17,7 @@ The main purpose of the project is to demonstrate backend modernization, automat
 - Course management
 - Student-to-course relationships
 - Image upload and replacement
+- Private MinIO image storage with build-time seeding
 - Protected owner account
 - Validation and error handling
 
@@ -45,6 +46,7 @@ Additional restrictions protect the `owner` role:
 - Laravel 13
 - MariaDB
 - Redis
+- MinIO for private image storage
 
 ### Frontend
 
@@ -57,9 +59,13 @@ Additional restrictions protect the `owner` role:
 
 - Docker
 - Docker Compose
+
+MinIO builds use Compose `additional_contexts` to consume the backend builder
+output. Use Docker Compose 2.17 or later with BuildKit support.
 - Apache
 - MariaDB
 - Redis
+- MinIO
 
 ### Testing and Code Quality
 
@@ -81,6 +87,7 @@ The pipeline includes:
 
 - PHPUnit feature tests
 - PHPUnit integration tests against the production MariaDB schema using `docker-compose.test.yml`
+- MinIO integration tests for seeded images, private access, uploads, streaming, and deletion
 - Cypress end-to-end tests
 - frontend build validation
 - PHPStan static analysis
@@ -114,6 +121,12 @@ TheSchool/
 ├── .github/
 │   └── workflows/
 ├── cypress/
+├── docker/
+│   └── dev.env
+├── minio/
+│   ├── Dockerfile
+│   ├── Dockerfile.dockerignore
+│   └── seed.sh
 ├── redis/
 ├── server/
 │   ├── app/
@@ -136,17 +149,18 @@ TheSchool/
 │   ├── uploads/
 │   ├── .dockerignore
 │   ├── .editorconfig
-│   ├── .env.example
 │   ├── .gitattributes
 │   ├── .gitignore
 │   ├── .php-cs-fixer.php
 │   ├── artisan
 │   ├── composer.json
 │   ├── composer.lock
-│   ├── docker/
+│   ├── scripts/
 │   │   ├── docker-entrypoint.sh
-│   │   └── dev-entrypoint.sh
+│   │   ├── dev-entrypoint.sh
+│   │   └── test-entrypoint.sh
 │   ├── Dockerfile
+│   ├── Dockerfile.dev
 │   ├── infection.json5
 │   ├── package-lock.json
 │   ├── package.json
@@ -158,6 +172,8 @@ TheSchool/
 ├── .gitignore
 ├── .hintrc
 ├── cypress.config.js
+├── docker-compose.dev.yml
+├── docker-compose.test.yml
 ├── docker-compose.yml
 ├── LICENSE
 ├── package-lock.json
@@ -183,6 +199,64 @@ This also applies to both IDs in
 HTTP 404 before reaching the controller.
 
 ### Image storage
+
+Docker environments store uploaded images in a private MinIO bucket through
+Laravel's S3 filesystem adapter. The authenticated `/upload/{filename}` route
+streams objects through Laravel; browsers never need MinIO credentials or direct
+access to its API. Existing database image paths remain unchanged.
+
+MinIO is built from the pinned upstream source release
+`RELEASE.2025-10-15T17-29-55Z`, following the upstream source-build distribution.
+The first build downloads Go dependencies and can take several minutes.
+
+Compose builds the existing `backend-builder` target from `server/Dockerfile`
+as a separate build context. The `backend-builder` service has zero replicas and
+does not run a container. MinIO copies `/app/uploads` from that context, starts a
+temporary MinIO process during its image build, creates the private bucket, and
+imports the images. `server/Dockerfile` contains no MinIO build stages.
+The final MinIO image contains
+the prepared data directory; no application startup script seeds images or creates
+buckets. `MINIO_BUCKET` is passed as a build argument as well as a runtime setting.
+Docker copies the image's seeded data into a new, empty MinIO volume on first use.
+Existing volumes keep their contents and are not reseeded by rebuilding the image.
+Existing local uploads require an explicit import before switching storage.
+Back up the `minio-data` volume together with MariaDB. Removing volumes with
+`down -v` also deletes MinIO images.
+
+All Compose stacks load `UPLOADS_DRIVER`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`,
+`MINIO_SECRET_KEY`, `MINIO_BUCKET`, and `MINIO_REGION` from the root `.env` using
+`${VARIABLE}` mappings. Copy `.env.example` to `.env` before first use, or add these
+variables to an existing `.env`. The template contains demo credentials; replace both credentials
+before deployment. At runtime, the application uses these credentials to access
+the bucket prepared by the builder. The builder uses temporary credentials that
+are separate from the runtime configuration. Production publishes neither MinIO
+port. Development exposes the console at `http://localhost:9001`; sign in using
+`MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY` from the root `.env`. The template values
+are `school_minio` / `school_minio_password`. The S3 API remains internal to Docker.
+
+The default image settings are:
+
+```dotenv
+UPLOADS_DRIVER=s3
+MINIO_ENDPOINT=http://minio:9000
+MINIO_ACCESS_KEY=school_minio
+MINIO_SECRET_KEY=school_minio_password
+MINIO_BUCKET=school-images
+MINIO_REGION=us-east-1
+```
+
+Add seed images to `server/uploads` before building. Rebuild MinIO after changing
+seed files or `MINIO_BUCKET`. A rebuilt image supplies seeds to new volumes;
+updating images in an existing bucket requires an explicit import.
+
+Outside Docker, `UPLOADS_DRIVER=local` (the default) retains local image storage.
+For an external S3-compatible server, set `UPLOADS_DRIVER=s3`, `MINIO_ENDPOINT`,
+`MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MINIO_REGION`, and `MINIO_BUCKET`.
+The configured endpoint must be reachable from PHP.
+
+The test stack starts its own MinIO with an anonymous volume populated from the
+seeded image. Integration tests verify the built-in fallback image, private access,
+authenticated streaming, uploads, and deletion, alongside filesystem fake tests.
 
 Uploaded images use compact filenames generated with PHP's `uniqid()` plus the
 detected extension. The database stores the relative `/upload/{filename}` path
@@ -264,10 +338,11 @@ cp .env.example .env
 
 In PowerShell, use `Copy-Item .env.example .env` instead.
 
-Docker Compose reads this root `.env` to configure the application and database
+Docker Compose reads this root `.env` to configure the application, database, and MinIO
 containers. The supplied values support a local demo at `http://localhost:8090`.
 For a deployment, set a unique `APP_KEY` (a `base64:` prefix followed by 32 random
-bytes encoded as Base64), replace `DB_PASSWORD` and `DB_ROOT_PASSWORD`, and set
+bytes encoded as Base64), replace `DB_PASSWORD`, `DB_ROOT_PASSWORD`,
+`MINIO_ACCESS_KEY`, and `MINIO_SECRET_KEY`, and set
 `APP_URL` to your application URL. Keep `APP_DEBUG=false` and do not commit `.env`.
 
 Then start the environment from the project root:
@@ -295,15 +370,16 @@ validation, PCOV for mutation testing, and a Vite server with live reload. Sourc
 changes are shared with the containers. Dependencies and application data use
 Docker volumes, separate from the production stack and host dependencies.
 
-From the project root, start it with:
+Prepare the root `.env` as described in [Start the environment](#start-the-environment),
+then start the development stack from the project root:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 Open `http://localhost:8090`. The first start installs Composer and npm
-dependencies and initializes the sample database from `sql/theschool.sql`. No root
-`.env` file is required: the app loads `docker/dev.env` with development
+dependencies and initializes the sample database from `sql/theschool.sql`. The root
+`.env` file supplies the MinIO settings; the app loads `docker/dev.env` with development
 overrides. Its sample credentials and application key are for local development.
 The owner login is `joe@mail.com` / `abc123!!`.
 
@@ -339,10 +415,13 @@ generated `server/public/hot` file if it remains after shutdown.
 
 ## Running Tests
 
-### Isolated MariaDB tests
+### MariaDB and MinIO integration tests
 
 Run PHPUnit against the same MariaDB image and SQL initialization used by
-production, without starting or changing the development or production stacks:
+production, together with a separate MinIO service. Prepare the root `.env` before
+running the stack. Keep `MINIO_ENDPOINT=http://minio:9000` for these tests: the
+test configuration reads the root MinIO variables, so an external endpoint would
+send test uploads and deletions to that server.
 
 ```bash
 mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
@@ -363,7 +442,8 @@ runs. Infection also runs against MariaDB in a separate CI job. The old SQLite
 PHPUnit job has been removed.
 
 Dependency and writable application directories use separate test volumes, and
-the source mount is read-only. Stop the stack after each run; `down -v` also
+the source mount is read-only. MinIO uses an anonymous data volume initialized
+from the built image. Stop the stack after each run; `down -v` also
 removes cached test dependencies and application files. Run PHPUnit and Infection
 separately: both services use the same isolated database. Future SQL schema
 changes require an explicit upgrade script for existing databases; the init
@@ -436,6 +516,7 @@ Examples include:
 - password hashing and preservation
 - image upload, replacement, preservation, and deletion
 - missing image-file edge cases
+- builder-seeded MinIO images and authenticated object streaming
 - student/course relationship synchronization
 - missing-resource responses
 
