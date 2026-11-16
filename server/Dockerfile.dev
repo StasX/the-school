@@ -20,7 +20,7 @@ RUN sed -ri 's!/var/www/html!/var/www/html/public!g' \
     /etc/apache2/conf-available/*.conf
 
 WORKDIR /var/www/html
-COPY docker/dev-entrypoint.sh /usr/local/bin/dev-entrypoint
+COPY scripts/dev-entrypoint.sh /usr/local/bin/dev-entrypoint
 RUN sed -i 's/\r$//' /usr/local/bin/dev-entrypoint \
     && chmod +x /usr/local/bin/dev-entrypoint
 

@@ -26,10 +26,7 @@ class UploadAuthorizationTest extends TestCase
         $response = $this->actingAs(new Administrator())->get('/upload/photo.png');
 
         $response->assertOk();
-        $this->assertSame(
-            Storage::disk('uploads')->path('photo.png'),
-            $response->getFile()->getPathname()
-        );
+        $this->assertSame('private image', $response->streamedContent());
         $this->assertTrue($response->headers->hasCacheControlDirective('private'));
         $this->assertTrue($response->headers->hasCacheControlDirective('no-store'));
     }
@@ -42,9 +39,13 @@ class UploadAuthorizationTest extends TestCase
         $response = $this->actingAs(new Administrator())->get('/upload/missing.png');
 
         $response->assertOk();
-        $this->assertSame(
-            Storage::disk('uploads')->path('NotFound.png'),
-            $response->getFile()->getPathname()
-        );
+        $this->assertSame('fallback image', $response->streamedContent());
+    }
+
+    public function test_missing_image_and_fallback_return_not_found(): void
+    {
+        Storage::fake('uploads');
+
+        $this->actingAs(new Administrator())->get('/upload/missing.png')->assertNotFound();
     }
 }

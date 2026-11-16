@@ -37,6 +37,9 @@ jobs:
           - name: sql
             file: sql/Dockerfile
 
+          - name: minio
+            file: minio/Dockerfile
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -89,7 +92,7 @@ jobs:
             --json \
             --output semgrep-results/semgrep.json \
             --error \
-            server redis sql
+            server redis sql minio
 
           EXIT_CODE=$?
 
@@ -100,7 +103,7 @@ jobs:
               --config p/docker \
               --config p/security-audit \
               --error \
-              server redis sql
+              server redis sql minio
           fi
 
           exit "$EXIT_CODE"
@@ -298,7 +301,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Prepare test volume mount points
-        run: mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
+        run: |
+          cp .env.example .env
+          mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
 
       - name: Run PHPUnit with the MariaDB test stack
         run: >-
@@ -335,7 +340,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Prepare test volume mount points
-        run: mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
+        run: |
+          cp .env.example .env
+          mkdir -p server/vendor server/storage server/bootstrap/cache server/uploads
 
       - name: Run Infection with the MariaDB test stack
         run: >-

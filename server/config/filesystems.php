@@ -61,8 +61,14 @@ return [
         ],
 
         'uploads' => [
-            'driver' => 'local',
-            'root' => base_path('uploads'),
+            'driver' => env('UPLOADS_DRIVER', 'local'),
+            'root' => env('UPLOADS_DRIVER', 'local') === 's3' ? '' : base_path('uploads'),
+            'key' => env('MINIO_ACCESS_KEY', 'school_minio'),
+            'secret' => env('MINIO_SECRET_KEY', 'school_minio_password'),
+            'region' => env('MINIO_REGION', 'us-east-1'),
+            'bucket' => env('MINIO_BUCKET', 'school-images'),
+            'endpoint' => env('MINIO_ENDPOINT', 'http://minio:9000'),
+            'use_path_style_endpoint' => true,
             'throw' => false,
         ],
 
